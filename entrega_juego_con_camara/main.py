@@ -22,10 +22,6 @@ class Player:
         self.x += (target_x - self.x) * ajustes.PLAYER_SMOOTHING
         self.y += (target_y - self.y) * ajustes.PLAYER_SMOOTHING
 
-    def draw(self, surface, hand_sprite):
-        surface.blit(hand_sprite, hand_sprite.get_rect(center=(int(self.x), int(self.y))))
-
-
 class FallingObject:
     def __init__(self, kind):
         self.kind = kind
@@ -168,80 +164,6 @@ def create_battery_sprite():
     return pygame.transform.smoothscale(sprite, ajustes.BATTERY_SPRITE_SIZE)
 
 
-def create_hand_sprite():
-    scale = 3
-    sprite = pygame.Surface(
-        (ajustes.HAND_SPRITE_SIZE[0] * scale, ajustes.HAND_SPRITE_SIZE[1] * scale),
-        pygame.SRCALPHA,
-    )
-
-    def rounded_part(rect, radius):
-        pygame.draw.rect(
-            sprite,
-            ajustes.HAND_OUTLINE_COLOR,
-            rect,
-            border_radius=radius,
-        )
-        inner = rect.inflate(-2 * scale, -2 * scale)
-        pygame.draw.rect(
-            sprite,
-            ajustes.HAND_COLOR,
-            inner,
-            border_radius=max(1, radius - scale),
-        )
-
-    fingers = (
-        (9, 17, 10, 29, 5),
-        (19, 7, 10, 39, 5),
-        (29, 4, 10, 40, 5),
-        (39, 10, 10, 34, 5),
-    )
-    for x, y, width, height, radius in fingers:
-        rounded_part(
-            pygame.Rect(x * scale, y * scale, width * scale, height * scale),
-            radius * scale,
-        )
-
-    thumb = [
-        (12 * scale, 34 * scale),
-        (5 * scale, 28 * scale),
-        (1 * scale, 31 * scale),
-        (2 * scale, 38 * scale),
-        (12 * scale, 49 * scale),
-    ]
-    pygame.draw.polygon(sprite, ajustes.HAND_OUTLINE_COLOR, thumb)
-    inner_thumb = [
-        (11 * scale, 36 * scale),
-        (5 * scale, 31 * scale),
-        (3 * scale, 33 * scale),
-        (4 * scale, 38 * scale),
-        (12 * scale, 46 * scale),
-    ]
-    pygame.draw.polygon(sprite, ajustes.HAND_COLOR, inner_thumb)
-
-    palm = pygame.Rect(8 * scale, 31 * scale, 43 * scale, 33 * scale)
-    pygame.draw.rect(
-        sprite,
-        ajustes.HAND_OUTLINE_COLOR,
-        palm,
-        border_radius=11 * scale,
-    )
-    pygame.draw.rect(
-        sprite,
-        ajustes.HAND_COLOR,
-        palm.inflate(-2 * scale, -2 * scale),
-        border_radius=10 * scale,
-    )
-    pygame.draw.line(
-        sprite,
-        ajustes.HAND_HIGHLIGHT_COLOR,
-        (17 * scale, 43 * scale),
-        (17 * scale, 55 * scale),
-        2 * scale,
-    )
-    return pygame.transform.smoothscale(sprite, ajustes.HAND_SPRITE_SIZE)
-
-
 def draw_text(surface, text, font, color, position, centered=False):
     image = font.render(text, True, color)
     rect = image.get_rect()
@@ -310,79 +232,11 @@ def save_ranking_score(ranking, player_name, score):
     return updated_ranking
 
 
-def create_cloud_sprite(width, height, cloud_color, shadow_color):
-    pixel_scale = ajustes.CLOUD_PIXEL_SCALE
-    sprite = pygame.Surface(
-        (width * pixel_scale, height * pixel_scale),
-        pygame.SRCALPHA,
-    )
-    puffs = [
-        (0.18, 0.68, 0.18, 0.24),
-        (0.34, 0.49, 0.20, 0.34),
-        (0.54, 0.43, 0.22, 0.40),
-        (0.73, 0.55, 0.20, 0.32),
-        (0.86, 0.70, 0.14, 0.22),
-    ]
-
-    def ellipse(rect, color):
-        pygame.draw.ellipse(sprite, color, rect)
-
-    ellipse(
-        (width * pixel_scale * 0.08, height * pixel_scale * 0.55,
-         width * pixel_scale * 0.84, height * pixel_scale * 0.38),
-        shadow_color,
-    )
-    for center_x, center_y, radius_x, radius_y in puffs:
-        x = center_x * width * pixel_scale
-        y = center_y * height * pixel_scale
-        rx = radius_x * width * pixel_scale
-        ry = radius_y * height * pixel_scale
-        ellipse((x - rx, y - ry, rx * 2, ry * 2), cloud_color)
-
-    return pygame.transform.smoothscale(sprite, (width, height))
-
-
-def create_sky(level_index):
-    level = ajustes.LEVELS[level_index]
-    sky = pygame.Surface((ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT))
-    top = level["sky_top"]
-    bottom = level["sky_bottom"]
-    for y in range(ajustes.WINDOW_HEIGHT):
-        blend = y / max(1, ajustes.WINDOW_HEIGHT - 1)
-        color = tuple(
-            round(top[channel] + (bottom[channel] - top[channel]) * blend)
-            for channel in range(3)
-        )
-        pygame.draw.line(sky, color, (0, y), (ajustes.WINDOW_WIDTH, y))
-
-    clouds = []
-    for _ in range(level["cloud_count"]):
-        width = random.randint(*ajustes.CLOUD_WIDTH_RANGE)
-        height = random.randint(*ajustes.CLOUD_HEIGHT_RANGE)
-        clouds.append(
-            {
-                "x": random.uniform(-width, ajustes.WINDOW_WIDTH),
-                "y": random.randint(*ajustes.CLOUD_Y_RANGE),
-                "speed": random.uniform(*ajustes.CLOUD_SPEED_RANGE),
-                "sprite": create_cloud_sprite(
-                    width,
-                    height,
-                    level["cloud_color"],
-                    level["cloud_shadow_color"],
-                ),
-            }
-        )
-    return sky, clouds
-
-
-def draw_background(surface, sky, clouds, delta_time):
-    surface.blit(sky, (0, 0))
-    for cloud in clouds:
-        sprite = cloud["sprite"]
-        cloud["x"] += cloud["speed"] * delta_time
-        if cloud["x"] > ajustes.WINDOW_WIDTH:
-            cloud["x"] = -sprite.get_width()
-        surface.blit(sprite, (round(cloud["x"]), cloud["y"]))
+def draw_camera_background(surface, camera_surface):
+    if camera_surface is None:
+        surface.fill((0, 0, 0))
+    else:
+        surface.blit(camera_surface, (0, 0))
 
 
 def draw_hud(
@@ -453,14 +307,12 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, ajustes.FONT_SIZE)
     small_font = pygame.font.Font(None, ajustes.SMALL_FONT_SIZE)
-
     collect_sound = pygame.mixer.Sound(str(ajustes.SOUND_COLLECT_PATH))
     hit_sound = pygame.mixer.Sound(str(ajustes.SOUND_HIT_PATH))
     collect_sound.set_volume(0.45)
     hit_sound.set_volume(0.55)
     bottle_sprite = create_bottle_sprite()
     battery_sprite = create_battery_sprite()
-    hand_sprite = create_hand_sprite()
     ranking = load_ranking()
 
     vision = Vision(ajustes.CAMERA_INDEX)
@@ -473,7 +325,6 @@ def main():
 
     player, objects, level_bottles, total_bottles, lives, remaining, spawn_elapsed, game_state = reset_game()
     level_index = 0
-    sky, clouds = create_sky(level_index)
     level_banner_time = ajustes.LEVEL_BANNER_SECONDS
     player_name = ""
     name_entry_error = ""
@@ -501,7 +352,6 @@ def main():
                             game_state,
                         ) = reset_game()
                         level_index = 0
-                        sky, clouds = create_sky(level_index)
                         level_banner_time = ajustes.LEVEL_BANNER_SECONDS
                         player_name = ""
                         name_entry_error = ""
@@ -525,7 +375,7 @@ def main():
                             player_name += event.unicode
 
             camera_position = vision.read_position()
-            draw_background(screen, sky, clouds, delta_time)
+            draw_camera_background(screen, vision.camera_surface)
 
             if game_state == "playing":
                 remaining -= delta_time
@@ -572,7 +422,6 @@ def main():
                         level_index += 1
                         level_bottles = 0
                         objects = []
-                        sky, clouds = create_sky(level_index)
                         level_banner_time = ajustes.LEVEL_BANNER_SECONDS
                 elif lives <= 0 or remaining <= 0:
                     result_state = "lost"
@@ -580,7 +429,6 @@ def main():
 
             for falling_object in objects:
                 falling_object.draw(screen, bottle_sprite, battery_sprite)
-            player.draw(screen, hand_sprite)
             draw_hud(
                 screen,
                 font,
@@ -614,7 +462,7 @@ def main():
             if camera_position is None and game_state == "playing":
                 draw_text(
                     screen,
-                    "No detecto el marcador verde",
+                    "No detecto el elemento verde",
                     small_font,
                     ajustes.WARNING_COLOR,
                     (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 52),
@@ -622,7 +470,7 @@ def main():
                 )
                 draw_text(
                     screen,
-                    "Usa un objeto verde intenso, grande y bien iluminado",
+                    "Mostralo con buena luz y frente a la cámara",
                     small_font,
                     ajustes.WARNING_COLOR,
                     (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 22),
