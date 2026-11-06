@@ -1,0 +1,749 @@
+import math
+import json
+import random
+import sys
+
+import pygame
+
+import ajustes
+from vision import Vision
+
+
+class Player:
+    def __init__(self):
+        self.x = ajustes.WINDOW_WIDTH / 2
+        self.y = ajustes.WINDOW_HEIGHT - 95
+        self.radius = ajustes.PLAYER_RADIUS
+
+    def follow(self, target):
+        if target is None:
+            return
+        target_x, target_y = target
+        self.x += (target_x - self.x) * ajustes.PLAYER_SMOOTHING
+        self.y += (target_y - self.y) * ajustes.PLAYER_SMOOTHING
+
+    def draw(self, surface, hand_sprite):
+        surface.blit(hand_sprite, hand_sprite.get_rect(center=(int(self.x), int(self.y))))
+
+
+class FallingObject:
+    def __init__(self, kind):
+        self.kind = kind
+        self.x = random.randint(ajustes.OBJECT_RADIUS, ajustes.WINDOW_WIDTH - ajustes.OBJECT_RADIUS)
+        self.y = -ajustes.OBJECT_RADIUS
+        self.radius = (
+            ajustes.BOTTLE_COLLISION_RADIUS
+            if kind == "bottle"
+            else ajustes.BATTERY_COLLISION_RADIUS
+        )
+        self.speed = random.uniform(*ajustes.OBJECT_SPEED_RANGE)
+        self.phase = random.uniform(0, math.tau)
+
+    def update(self, delta_time):
+        self.y += self.speed * delta_time
+        self.phase += delta_time * ajustes.BOTTLE_PHASE_SPEED
+        if self.kind == "bottle":
+            self.x += math.sin(self.phase) * ajustes.BOTTLE_SWAY * delta_time
+
+    def draw(self, surface, bottle_sprite, battery_sprite):
+        center = (int(self.x), int(self.y))
+        if self.kind == "bottle":
+            surface.blit(bottle_sprite, bottle_sprite.get_rect(center=center))
+        else:
+            surface.blit(battery_sprite, battery_sprite.get_rect(center=center))
+
+
+def create_bottle_sprite():
+    scale = 3
+    width, height = ajustes.BOTTLE_SPRITE_SIZE
+    sprite = pygame.Surface((width * scale, height * scale), pygame.SRCALPHA)
+
+    def point(x, y):
+        return int(x * scale), int(y * scale)
+
+    body = [
+        point(14, 11),
+        point(22, 11),
+        point(23, 16),
+        point(27, 20),
+        point(30, 27),
+        point(30, 45),
+        point(28, 49),
+        point(8, 49),
+        point(6, 45),
+        point(6, 27),
+        point(9, 20),
+        point(13, 16),
+    ]
+    pygame.draw.polygon(sprite, ajustes.BOTTLE_BODY_COLOR, body)
+    pygame.draw.polygon(sprite, ajustes.BOTTLE_EDGE_COLOR, body, max(1, scale))
+    pygame.draw.rect(sprite, ajustes.BOTTLE_BODY_COLOR, (*point(13, 8), 10 * scale, 8 * scale))
+    pygame.draw.rect(
+        sprite,
+        ajustes.BOTTLE_EDGE_COLOR,
+        (*point(13, 8), 10 * scale, 8 * scale),
+        max(1, scale),
+    )
+    pygame.draw.rect(sprite, ajustes.BOTTLE_CAP_COLOR, (*point(11, 2), 14 * scale, 8 * scale))
+    pygame.draw.rect(
+        sprite,
+        ajustes.BOTTLE_CAP_EDGE_COLOR,
+        (*point(11, 2), 14 * scale, 8 * scale),
+        max(1, scale),
+    )
+    for x in range(13, 25, 3):
+        pygame.draw.line(
+            sprite,
+            ajustes.BOTTLE_CAP_EDGE_COLOR,
+            point(x, 3),
+            point(x, 8),
+            max(1, scale // 2),
+        )
+    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(10, 25), point(10, 43), scale)
+    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(12, 21), point(14, 18), max(1, scale // 2))
+    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(9, 45), point(13, 47), max(1, scale // 2))
+    pygame.draw.rect(sprite, (195, 255, 240, 100), (*point(12, 30), 12 * scale, 8 * scale))
+
+    label_font = pygame.font.Font(None, 11 * scale)
+    label = label_font.render("ECO", True, ajustes.BOTTLE_LABEL_COLOR)
+    sprite.blit(label, label.get_rect(center=point(18, 34)))
+    return pygame.transform.smoothscale(sprite, ajustes.BOTTLE_SPRITE_SIZE).convert_alpha()
+
+
+def create_battery_sprite():
+    scale = 3
+    width, height = ajustes.BATTERY_SPRITE_SIZE
+    sprite = pygame.Surface((width * scale, height * scale), pygame.SRCALPHA)
+    body = pygame.Rect(4 * scale, 8 * scale, 30 * scale, 42 * scale)
+    pygame.draw.rect(
+        sprite,
+        ajustes.BATTERY_BODY_COLOR,
+        body,
+        border_radius=4 * scale,
+    )
+    pygame.draw.rect(
+        sprite,
+        ajustes.BATTERY_EDGE_COLOR,
+        body,
+        width=2 * scale,
+        border_radius=4 * scale,
+    )
+    pygame.draw.rect(
+        sprite,
+        ajustes.BATTERY_TERMINAL_COLOR,
+        (12 * scale, 3 * scale, 14 * scale, 6 * scale),
+        border_radius=2 * scale,
+    )
+    pygame.draw.rect(
+        sprite,
+        ajustes.BATTERY_LABEL_COLOR,
+        (7 * scale, 20 * scale, 24 * scale, 19 * scale),
+        border_radius=2 * scale,
+    )
+    warning = [
+        (19 * scale, 22 * scale),
+        (28 * scale, 36 * scale),
+        (10 * scale, 36 * scale),
+    ]
+    pygame.draw.polygon(sprite, ajustes.BATTERY_WARNING_COLOR, warning)
+    pygame.draw.polygon(
+        sprite,
+        ajustes.BATTERY_EDGE_COLOR,
+        warning,
+        width=scale,
+    )
+    pygame.draw.line(
+        sprite,
+        ajustes.BATTERY_EDGE_COLOR,
+        (19 * scale, 27 * scale),
+        (19 * scale, 32 * scale),
+        width=2 * scale,
+    )
+    pygame.draw.circle(
+        sprite,
+        ajustes.BATTERY_EDGE_COLOR,
+        (19 * scale, 34 * scale),
+        scale,
+    )
+    return pygame.transform.smoothscale(sprite, ajustes.BATTERY_SPRITE_SIZE)
+
+
+def create_hand_sprite():
+    scale = 3
+    sprite = pygame.Surface(
+        (ajustes.HAND_SPRITE_SIZE[0] * scale, ajustes.HAND_SPRITE_SIZE[1] * scale),
+        pygame.SRCALPHA,
+    )
+
+    def rounded_part(rect, radius):
+        pygame.draw.rect(
+            sprite,
+            ajustes.HAND_OUTLINE_COLOR,
+            rect,
+            border_radius=radius,
+        )
+        inner = rect.inflate(-2 * scale, -2 * scale)
+        pygame.draw.rect(
+            sprite,
+            ajustes.HAND_COLOR,
+            inner,
+            border_radius=max(1, radius - scale),
+        )
+
+    fingers = (
+        (9, 17, 10, 29, 5),
+        (19, 7, 10, 39, 5),
+        (29, 4, 10, 40, 5),
+        (39, 10, 10, 34, 5),
+    )
+    for x, y, width, height, radius in fingers:
+        rounded_part(
+            pygame.Rect(x * scale, y * scale, width * scale, height * scale),
+            radius * scale,
+        )
+
+    thumb = [
+        (12 * scale, 34 * scale),
+        (5 * scale, 28 * scale),
+        (1 * scale, 31 * scale),
+        (2 * scale, 38 * scale),
+        (12 * scale, 49 * scale),
+    ]
+    pygame.draw.polygon(sprite, ajustes.HAND_OUTLINE_COLOR, thumb)
+    inner_thumb = [
+        (11 * scale, 36 * scale),
+        (5 * scale, 31 * scale),
+        (3 * scale, 33 * scale),
+        (4 * scale, 38 * scale),
+        (12 * scale, 46 * scale),
+    ]
+    pygame.draw.polygon(sprite, ajustes.HAND_COLOR, inner_thumb)
+
+    palm = pygame.Rect(8 * scale, 31 * scale, 43 * scale, 33 * scale)
+    pygame.draw.rect(
+        sprite,
+        ajustes.HAND_OUTLINE_COLOR,
+        palm,
+        border_radius=11 * scale,
+    )
+    pygame.draw.rect(
+        sprite,
+        ajustes.HAND_COLOR,
+        palm.inflate(-2 * scale, -2 * scale),
+        border_radius=10 * scale,
+    )
+    pygame.draw.line(
+        sprite,
+        ajustes.HAND_HIGHLIGHT_COLOR,
+        (17 * scale, 43 * scale),
+        (17 * scale, 55 * scale),
+        2 * scale,
+    )
+    return pygame.transform.smoothscale(sprite, ajustes.HAND_SPRITE_SIZE)
+
+
+def draw_text(surface, text, font, color, position, centered=False):
+    image = font.render(text, True, color)
+    rect = image.get_rect()
+    if centered:
+        rect.center = position
+    else:
+        rect.topleft = position
+    surface.blit(image, rect)
+    return rect
+
+
+def spawn_object():
+    kind = "bottle" if random.random() < ajustes.BOTTLE_CHANCE else "battery"
+    return FallingObject(kind)
+
+
+def reset_game():
+    return (
+        Player(),
+        [],
+        0,
+        0,
+        ajustes.STARTING_LIVES,
+        ajustes.GAME_DURATION,
+        0.0,
+        "playing",
+    )
+
+
+def load_ranking():
+    if not ajustes.RANKING_PATH.exists():
+        return []
+
+    try:
+        ranking_data = json.loads(ajustes.RANKING_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise RuntimeError(
+            f"El archivo de ranking no tiene un formato valido: {ajustes.RANKING_PATH}"
+        ) from error
+
+    if not isinstance(ranking_data, list) or any(
+        not isinstance(entry, dict)
+        or not isinstance(entry.get("name"), str)
+        or type(entry.get("score")) is not int
+        or entry["score"] < 0
+        for entry in ranking_data
+    ):
+        raise RuntimeError(
+            f"El archivo de ranking contiene datos invalidos: {ajustes.RANKING_PATH}"
+        )
+
+    return sorted(
+        ranking_data,
+        key=lambda entry: (-entry["score"], entry["name"].casefold()),
+    )[:ajustes.MAX_RANKING_ENTRIES]
+
+
+def save_ranking_score(ranking, player_name, score):
+    updated_ranking = [*ranking, {"name": player_name, "score": score}]
+    updated_ranking.sort(key=lambda entry: (-entry["score"], entry["name"].casefold()))
+    updated_ranking = updated_ranking[:ajustes.MAX_RANKING_ENTRIES]
+    ajustes.RANKING_PATH.write_text(
+        json.dumps(updated_ranking, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return updated_ranking
+
+
+def create_cloud_sprite(width, height, cloud_color, shadow_color):
+    pixel_scale = ajustes.CLOUD_PIXEL_SCALE
+    sprite = pygame.Surface(
+        (width * pixel_scale, height * pixel_scale),
+        pygame.SRCALPHA,
+    )
+    puffs = [
+        (0.18, 0.68, 0.18, 0.24),
+        (0.34, 0.49, 0.20, 0.34),
+        (0.54, 0.43, 0.22, 0.40),
+        (0.73, 0.55, 0.20, 0.32),
+        (0.86, 0.70, 0.14, 0.22),
+    ]
+
+    def ellipse(rect, color):
+        pygame.draw.ellipse(sprite, color, rect)
+
+    ellipse(
+        (width * pixel_scale * 0.08, height * pixel_scale * 0.55,
+         width * pixel_scale * 0.84, height * pixel_scale * 0.38),
+        shadow_color,
+    )
+    for center_x, center_y, radius_x, radius_y in puffs:
+        x = center_x * width * pixel_scale
+        y = center_y * height * pixel_scale
+        rx = radius_x * width * pixel_scale
+        ry = radius_y * height * pixel_scale
+        ellipse((x - rx, y - ry, rx * 2, ry * 2), cloud_color)
+
+    return pygame.transform.smoothscale(sprite, (width, height))
+
+
+def create_sky(level_index):
+    level = ajustes.LEVELS[level_index]
+    sky = pygame.Surface((ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT))
+    top = level["sky_top"]
+    bottom = level["sky_bottom"]
+    for y in range(ajustes.WINDOW_HEIGHT):
+        blend = y / max(1, ajustes.WINDOW_HEIGHT - 1)
+        color = tuple(
+            round(top[channel] + (bottom[channel] - top[channel]) * blend)
+            for channel in range(3)
+        )
+        pygame.draw.line(sky, color, (0, y), (ajustes.WINDOW_WIDTH, y))
+
+    clouds = []
+    for _ in range(level["cloud_count"]):
+        width = random.randint(*ajustes.CLOUD_WIDTH_RANGE)
+        height = random.randint(*ajustes.CLOUD_HEIGHT_RANGE)
+        clouds.append(
+            {
+                "x": random.uniform(-width, ajustes.WINDOW_WIDTH),
+                "y": random.randint(*ajustes.CLOUD_Y_RANGE),
+                "speed": random.uniform(*ajustes.CLOUD_SPEED_RANGE),
+                "sprite": create_cloud_sprite(
+                    width,
+                    height,
+                    level["cloud_color"],
+                    level["cloud_shadow_color"],
+                ),
+            }
+        )
+    return sky, clouds
+
+
+def draw_background(surface, sky, clouds, delta_time):
+    surface.blit(sky, (0, 0))
+    for cloud in clouds:
+        sprite = cloud["sprite"]
+        cloud["x"] += cloud["speed"] * delta_time
+        if cloud["x"] > ajustes.WINDOW_WIDTH:
+            cloud["x"] = -sprite.get_width()
+        surface.blit(sprite, (round(cloud["x"]), cloud["y"]))
+
+
+def draw_hud(
+    surface,
+    font,
+    small_font,
+    level_index,
+    level_bottles,
+    lives,
+    remaining,
+    game_state,
+):
+    level = ajustes.LEVELS[level_index]
+    draw_text(
+        surface,
+        f"BOTELLAS  {level_bottles}/{level['bottles_to_collect']}",
+        small_font,
+        level["text_color"],
+        (24, 20),
+    )
+    draw_text(
+        surface,
+        f"VIDAS  {'♥ ' * lives}",
+        small_font,
+        level["text_color"],
+        (24, 54),
+    )
+    draw_text(
+        surface,
+        f"NIVEL {level_index + 1}/{len(ajustes.LEVELS)}  {level['name']}",
+        small_font,
+        level["text_color"],
+        (365, 20),
+    )
+    draw_text(
+        surface,
+        f"TIEMPO  {max(0, math.ceil(remaining)):02d}",
+        small_font,
+        level["text_color"],
+        (ajustes.WINDOW_WIDTH - 175, 20),
+    )
+    if game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS:
+        draw_text(
+            surface,
+            "¡ÚLTIMOS SEGUNDOS!",
+            font,
+            ajustes.WARNING_COLOR,
+            (ajustes.WINDOW_WIDTH - 250, 54),
+        )
+
+
+def main():
+    pygame.init()
+    try:
+        pygame.mixer.init()
+    except pygame.error as error:
+        pygame.quit()
+        raise RuntimeError(f"No se pudo iniciar el audio: {error}") from error
+
+    display_flags = pygame.SCALED
+    if ajustes.FULLSCREEN:
+        display_flags |= pygame.FULLSCREEN
+    screen = pygame.display.set_mode(
+        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
+        display_flags,
+    )
+    pygame.display.set_caption(ajustes.WINDOW_TITLE)
+    clock = pygame.time.Clock()
+    font = pygame.font.Font(None, ajustes.FONT_SIZE)
+    small_font = pygame.font.Font(None, ajustes.SMALL_FONT_SIZE)
+
+    collect_sound = pygame.mixer.Sound(str(ajustes.SOUND_COLLECT_PATH))
+    hit_sound = pygame.mixer.Sound(str(ajustes.SOUND_HIT_PATH))
+    collect_sound.set_volume(0.45)
+    hit_sound.set_volume(0.55)
+    bottle_sprite = create_bottle_sprite()
+    battery_sprite = create_battery_sprite()
+    hand_sprite = create_hand_sprite()
+    ranking = load_ranking()
+
+    vision = Vision(ajustes.CAMERA_INDEX)
+    if not vision.is_opened:
+        vision.release()
+        pygame.quit()
+        raise RuntimeError(
+            "No se pudo abrir la cámara. Conectala y revisá los permisos antes de ejecutar el juego."
+        )
+
+    player, objects, level_bottles, total_bottles, lives, remaining, spawn_elapsed, game_state = reset_game()
+    level_index = 0
+    sky, clouds = create_sky(level_index)
+    level_banner_time = ajustes.LEVEL_BANNER_SECONDS
+    player_name = ""
+    name_entry_error = ""
+    result_state = ""
+    running = True
+    try:
+        while running:
+            delta_time = min(clock.tick(ajustes.FPS) / 1000, ajustes.MAX_DELTA_TIME)
+            level_banner_time = max(0, level_banner_time - delta_time)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    if game_state == "ranking":
+                        (
+                            player,
+                            objects,
+                            level_bottles,
+                            total_bottles,
+                            lives,
+                            remaining,
+                            spawn_elapsed,
+                            game_state,
+                        ) = reset_game()
+                        level_index = 0
+                        sky, clouds = create_sky(level_index)
+                        level_banner_time = ajustes.LEVEL_BANNER_SECONDS
+                        player_name = ""
+                        name_entry_error = ""
+                        result_state = ""
+                elif game_state == "enter_name" and event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    elif event.key == pygame.K_RETURN:
+                        if player_name.strip():
+                            ranking = save_ranking_score(
+                                ranking,
+                                player_name.strip(),
+                                total_bottles,
+                            )
+                            game_state = "ranking"
+                            name_entry_error = ""
+                        else:
+                            name_entry_error = "Escribe tu nombre antes de continuar."
+                    elif event.unicode and event.unicode.isprintable():
+                        if len(player_name) < ajustes.MAX_PLAYER_NAME_LENGTH:
+                            player_name += event.unicode
+
+            camera_position = vision.read_position()
+            draw_background(screen, sky, clouds, delta_time)
+
+            if game_state == "playing":
+                remaining -= delta_time
+                player.follow(camera_position)
+                spawn_elapsed += delta_time
+                if spawn_elapsed >= ajustes.SPAWN_INTERVAL:
+                    objects.append(spawn_object())
+                    spawn_elapsed -= ajustes.SPAWN_INTERVAL
+
+                level_complete = False
+                for falling_object in objects:
+                    falling_object.update(delta_time)
+                    distance = math.hypot(
+                        falling_object.x - player.x,
+                        falling_object.y - player.y,
+                    )
+                    if distance < falling_object.radius + player.radius * 0.72:
+                        if falling_object.kind == "bottle":
+                            level_bottles += 1
+                            total_bottles += 1
+                            collect_sound.play()
+                            if level_bottles >= ajustes.LEVELS[level_index]["bottles_to_collect"]:
+                                level_complete = True
+                                falling_object.y = (
+                                    ajustes.WINDOW_HEIGHT + falling_object.radius
+                                )
+                                break
+                        else:
+                            lives -= 1
+                            hit_sound.play()
+                        falling_object.y = ajustes.WINDOW_HEIGHT + falling_object.radius
+
+                objects = [
+                    falling_object
+                    for falling_object in objects
+                    if falling_object.y < ajustes.WINDOW_HEIGHT + falling_object.radius
+                ]
+
+                if level_complete:
+                    if level_index == len(ajustes.LEVELS) - 1:
+                        result_state = "won"
+                        game_state = "enter_name"
+                    else:
+                        level_index += 1
+                        level_bottles = 0
+                        objects = []
+                        sky, clouds = create_sky(level_index)
+                        level_banner_time = ajustes.LEVEL_BANNER_SECONDS
+                elif lives <= 0 or remaining <= 0:
+                    result_state = "lost"
+                    game_state = "enter_name"
+
+            for falling_object in objects:
+                falling_object.draw(screen, bottle_sprite, battery_sprite)
+            player.draw(screen, hand_sprite)
+            draw_hud(
+                screen,
+                font,
+                small_font,
+                level_index,
+                level_bottles,
+                lives,
+                remaining,
+                game_state,
+            )
+
+            if level_banner_time > 0 and game_state == "playing":
+                level = ajustes.LEVELS[level_index]
+                draw_text(
+                    screen,
+                    f"NIVEL {level_index + 1}: {level['name']}",
+                    font,
+                    level["text_color"],
+                    (ajustes.WINDOW_WIDTH // 2, 112),
+                    centered=True,
+                )
+                draw_text(
+                    screen,
+                    f"Junta {level['bottles_to_collect']} botellas para avanzar",
+                    small_font,
+                    level["text_color"],
+                    (ajustes.WINDOW_WIDTH // 2, 151),
+                    centered=True,
+                )
+
+            if camera_position is None and game_state == "playing":
+                draw_text(
+                    screen,
+                    "No detecto el marcador verde",
+                    small_font,
+                    ajustes.WARNING_COLOR,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 52),
+                    centered=True,
+                )
+                draw_text(
+                    screen,
+                    "Usa un objeto verde intenso, grande y bien iluminado",
+                    small_font,
+                    ajustes.WARNING_COLOR,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 22),
+                    centered=True,
+                )
+
+            if game_state == "enter_name":
+                overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                overlay.fill((5, 9, 24, 210))
+                screen.blit(overlay, (0, 0))
+                headline = (
+                    "¡PLANETA LIMPIO!"
+                    if result_state == "won"
+                    else "SE AGOTÓ LA ENERGÍA"
+                )
+                color = (
+                    ajustes.BOTTLE_EDGE_COLOR[:3]
+                    if result_state == "won"
+                    else ajustes.WARNING_COLOR
+                )
+                draw_text(
+                    screen,
+                    headline,
+                    font,
+                    color,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 - 35),
+                    centered=True,
+                )
+                draw_text(
+                    screen,
+                    f"Puntaje: {total_bottles} botellas",
+                    small_font,
+                    ajustes.WHITE,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 4),
+                    centered=True,
+                )
+                draw_text(
+                    screen,
+                    "Escribe tu nombre y presiona Enter:",
+                    small_font,
+                    ajustes.WHITE,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 48),
+                    centered=True,
+                )
+                name_box = pygame.Rect(
+                    ajustes.WINDOW_WIDTH // 2 - 190,
+                    ajustes.WINDOW_HEIGHT // 2 + 72,
+                    380,
+                    48,
+                )
+                pygame.draw.rect(screen, (245, 250, 255), name_box, border_radius=8)
+                name_image = small_font.render(
+                    player_name or "Tu nombre",
+                    True,
+                    (24, 73, 113) if player_name else (120, 139, 155),
+                )
+                screen.blit(name_image, name_image.get_rect(center=name_box.center))
+                if name_entry_error:
+                    draw_text(
+                        screen,
+                        name_entry_error,
+                        small_font,
+                        ajustes.WARNING_COLOR,
+                        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 146),
+                        centered=True,
+                    )
+
+            elif game_state == "ranking":
+                overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+                overlay.fill((5, 9, 24, 220))
+                screen.blit(overlay, (0, 0))
+                draw_text(
+                    screen,
+                    "RANKING",
+                    font,
+                    ajustes.BOTTLE_EDGE_COLOR[:3],
+                    (ajustes.WINDOW_WIDTH // 2, 88),
+                    centered=True,
+                )
+                for index, entry in enumerate(ranking):
+                    line = (
+                        f"{index + 1:>2}.  {entry['name']:<16}  "
+                        f"{entry['score']:>3} botellas"
+                    )
+                    draw_text(
+                        screen,
+                        line,
+                        small_font,
+                        ajustes.WHITE,
+                        (ajustes.WINDOW_WIDTH // 2, 142 + index * 34),
+                        centered=True,
+                    )
+                if not ranking:
+                    draw_text(
+                        screen,
+                        "Aun no hay puntajes guardados.",
+                        small_font,
+                        ajustes.WHITE,
+                        (ajustes.WINDOW_WIDTH // 2, 200),
+                        centered=True,
+                    )
+                draw_text(
+                    screen,
+                    "Presiona R para volver a jugar",
+                    small_font,
+                    ajustes.WHITE,
+                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 50),
+                    centered=True,
+                )
+
+            pygame.display.flip()
+    finally:
+        vision.release()
+        pygame.quit()
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except RuntimeError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
