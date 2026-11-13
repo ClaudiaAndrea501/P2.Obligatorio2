@@ -1,17 +1,85 @@
+import math
+import time
+from typing import NamedTuple
+
 import cv2
 import pygame
+from mediapipe import Image, ImageFormat
+from mediapipe.tasks.python import BaseOptions
+from mediapipe.tasks.python.vision import (
+    HandLandmarker,
+    HandLandmarkerOptions,
+    RunningMode,
+)
 
 import ajustes
 
 
+class HandState(NamedTuple):
+    position: tuple[int, int]
+    is_open: bool
+    radius: int
+
+
+def hand_state_from_landmarks(landmarks):
+    screen_points = [
+        (
+            min(ajustes.WINDOW_WIDTH - 1, round(point.x * ajustes.WINDOW_WIDTH)),
+            min(ajustes.WINDOW_HEIGHT - 1, round(point.y * ajustes.WINDOW_HEIGHT)),
+        )
+        for point in landmarks
+    ]
+    palm_indices = (0, 5, 9, 13, 17)
+    center = (
+        round(
+            sum(screen_points[index][0] for index in palm_indices)
+            / len(palm_indices)
+        ),
+        round(
+            sum(screen_points[index][1] for index in palm_indices)
+            / len(palm_indices)
+        ),
+    )
+    finger_pairs = ((8, 6), (12, 10), (16, 14), (20, 18))
+    extended_fingers = sum(
+        math.dist(screen_points[tip], screen_points[0])
+        > math.dist(screen_points[pip], screen_points[0]) * 1.12
+        for tip, pip in finger_pairs
+    )
+    hand_width = max(point[0] for point in screen_points) - min(
+        point[0] for point in screen_points
+    )
+    hand_height = max(point[1] for point in screen_points) - min(
+        point[1] for point in screen_points
+    )
+    radius = max(20, min(42, round(max(hand_width, hand_height) * 0.16)))
+    return HandState(center, extended_fingers >= 3, radius)
+
+
 class Vision:
     def __init__(self, camera_index):
+        if not ajustes.HAND_MODEL_PATH.is_file():
+            raise FileNotFoundError(
+                f"No se encontro el modelo de deteccion de manos: "
+                f"{ajustes.HAND_MODEL_PATH}"
+            )
+        self.hand_landmarker = HandLandmarker.create_from_options(
+            HandLandmarkerOptions(
+                base_options=BaseOptions(
+                    model_asset_path=str(ajustes.HAND_MODEL_PATH)
+                ),
+                running_mode=RunningMode.VIDEO,
+                num_hands=1,
+                min_hand_detection_confidence=0.5,
+                min_hand_presence_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
+        )
         self.cap = cv2.VideoCapture(camera_index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, ajustes.CAMERA_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, ajustes.CAMERA_HEIGHT)
+        self._last_frame_timestamp_ms = 0
         self._camera_surface = None
-        self._last_marker = None
-        self._frames_without_marker = 0
 
     @property
     def is_opened(self):
@@ -21,12 +89,10 @@ class Vision:
     def camera_surface(self):
         return self._camera_surface
 
-    def read_position(self):
+    def read_hand_state(self):
         success, frame = self.cap.read()
         if not success:
             self._camera_surface = None
-            self._last_marker = None
-            self._frames_without_marker = 0
             return None
 
         mirrored_frame = cv2.flip(frame, 1)
@@ -49,107 +115,32 @@ class Vision:
         background_frame = cv2.resize(
             rgb_background,
             (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
-            interpolation=cv2.INTER_LINEAR,
+            interpolation=(
+                cv2.INTER_AREA
+                if crop.shape[1] > ajustes.WINDOW_WIDTH
+                or crop.shape[0] > ajustes.WINDOW_HEIGHT
+                else cv2.INTER_CUBIC
+            ),
         )
         self._camera_surface = pygame.image.frombuffer(
             background_frame.tobytes(),
             (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
             "RGB",
         ).copy()
-        tracking_height, tracking_width = crop.shape[:2]
-        hsv_frame = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(
-            hsv_frame,
-            ajustes.GREEN_HSV_LOWER,
-            ajustes.GREEN_HSV_UPPER,
+        self._last_frame_timestamp_ms = max(
+            self._last_frame_timestamp_ms + 1,
+            time.monotonic_ns() // 1_000_000,
         )
-        kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE,
-            (ajustes.MASK_KERNEL_SIZE, ajustes.MASK_KERNEL_SIZE),
+        result = self.hand_landmarker.detect_for_video(
+            Image(image_format=ImageFormat.SRGB, data=rgb_background),
+            self._last_frame_timestamp_ms,
         )
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        contours, _ = cv2.findContours(
-            mask,
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE,
-        )
-        max_marker_area = (
-            tracking_width * tracking_height * ajustes.MAX_MARKER_AREA_RATIO
-        )
-        markers = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if not ajustes.MIN_MARKER_AREA <= area <= max_marker_area:
-                continue
-            _, _, width, height = cv2.boundingRect(contour)
-            if min(width, height) < ajustes.MIN_MARKER_SIDE:
-                continue
-            max_side = (
-                min(tracking_width, tracking_height)
-                * ajustes.MAX_MARKER_SIDE_RATIO
-            )
-            if max(width, height) > max_side:
-                continue
-            moments = cv2.moments(contour)
-            if moments["m00"] == 0:
-                continue
-            center = (
-                round(moments["m10"] / moments["m00"]),
-                round(moments["m01"] / moments["m00"]),
-            )
-            markers.append((center, area))
-
-        marker = self._select_marker(markers, tracking_width, tracking_height)
-        if marker is None:
-            self._frames_without_marker += 1
-            if self._frames_without_marker > ajustes.MARKER_REACQUIRE_FRAMES:
-                self._last_marker = None
+        if not result.hand_landmarks:
             return None
 
-        camera_position, area = marker
-        self._last_marker = (camera_position, area)
-        self._frames_without_marker = 0
-        screen_x = round(
-            camera_position[0] * ajustes.WINDOW_WIDTH / tracking_width
-        )
-        screen_y = round(
-            camera_position[1] * ajustes.WINDOW_HEIGHT / tracking_height
-        )
-        screen_x = max(0, min(screen_x, ajustes.WINDOW_WIDTH - 1))
-        screen_y = max(0, min(screen_y, ajustes.WINDOW_HEIGHT - 1))
-        return screen_x, screen_y
-
-    def _select_marker(self, markers, frame_width, frame_height):
-        if not markers:
-            return None
-
-        if (
-            self._last_marker is None
-            or self._frames_without_marker > ajustes.MARKER_REACQUIRE_FRAMES
-        ):
-            return max(markers, key=lambda marker: marker[1])
-
-        previous_position, previous_area = self._last_marker
-        max_distance = min(frame_width, frame_height) * ajustes.MAX_MARKER_JUMP_RATIO
-        candidates = []
-        for position, area in markers:
-            distance = cv2.norm(
-                (float(position[0]), float(position[1])),
-                (float(previous_position[0]), float(previous_position[1])),
-            )
-            if distance > max_distance:
-                continue
-            area_change = abs(area - previous_area) / max(area, previous_area)
-            score = distance + area_change * max_distance * 0.35
-            candidates.append((score, position, area))
-        if not candidates:
-            return None
-        _, position, area = min(candidates, key=lambda candidate: candidate[0])
-        return position, area
+        return hand_state_from_landmarks(result.hand_landmarks[0])
 
     def release(self):
         self.cap.release()
+        self.hand_landmarker.close()
         self._camera_surface = None
-        self._last_marker = None
-        self._frames_without_marker = 0

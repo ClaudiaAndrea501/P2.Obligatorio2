@@ -27,6 +27,9 @@ class FallingObject:
         self.kind = kind
         self.x = random.randint(ajustes.OBJECT_RADIUS, ajustes.WINDOW_WIDTH - ajustes.OBJECT_RADIUS)
         self.y = -ajustes.OBJECT_RADIUS
+        self.crushed = False
+        self.crushed_time = 0.0
+        self.hand_touched_open = False
         self.radius = (
             ajustes.BOTTLE_COLLISION_RADIUS
             if kind == "bottle"
@@ -36,17 +39,30 @@ class FallingObject:
         self.phase = random.uniform(0, math.tau)
 
     def update(self, delta_time):
+        if self.crushed:
+            self.crushed_time = max(0, self.crushed_time - delta_time)
+            if self.crushed_time == 0:
+                self.y = ajustes.WINDOW_HEIGHT + self.radius
+            return
         self.y += self.speed * delta_time
         self.phase += delta_time * ajustes.BOTTLE_PHASE_SPEED
         if self.kind == "bottle":
             self.x += math.sin(self.phase) * ajustes.BOTTLE_SWAY * delta_time
 
-    def draw(self, surface, bottle_sprite, battery_sprite):
+    def draw(self, surface, bottle_sprite, battery_sprite, crushed_bottle_sprite):
         center = (int(self.x), int(self.y))
         if self.kind == "bottle":
-            surface.blit(bottle_sprite, bottle_sprite.get_rect(center=center))
+            sprite = crushed_bottle_sprite if self.crushed else bottle_sprite
+            surface.blit(sprite, sprite.get_rect(center=center))
         else:
             surface.blit(battery_sprite, battery_sprite.get_rect(center=center))
+
+    def crush(self):
+        if self.kind != "bottle" or self.crushed:
+            return False
+        self.crushed = True
+        self.crushed_time = ajustes.CRUSHED_BOTTLE_DISPLAY_SECONDS
+        return True
 
 
 def create_bottle_sprite():
@@ -104,6 +120,10 @@ def create_bottle_sprite():
     label = label_font.render("ECO", True, ajustes.BOTTLE_LABEL_COLOR)
     sprite.blit(label, label.get_rect(center=point(18, 34)))
     return pygame.transform.smoothscale(sprite, ajustes.BOTTLE_SPRITE_SIZE).convert_alpha()
+
+
+def create_crushed_bottle_sprite(bottle_sprite):
+    return pygame.transform.smoothscale(bottle_sprite, (48, 18)).convert_alpha()
 
 
 def create_battery_sprite():
@@ -312,6 +332,7 @@ def main():
     collect_sound.set_volume(0.45)
     hit_sound.set_volume(0.55)
     bottle_sprite = create_bottle_sprite()
+    crushed_bottle_sprite = create_crushed_bottle_sprite(bottle_sprite)
     battery_sprite = create_battery_sprite()
     ranking = load_ranking()
 
@@ -374,39 +395,61 @@ def main():
                         if len(player_name) < ajustes.MAX_PLAYER_NAME_LENGTH:
                             player_name += event.unicode
 
-            camera_position = vision.read_position()
+            hand_state = vision.read_hand_state()
+            camera_position = hand_state.position if hand_state is not None else None
             draw_camera_background(screen, vision.camera_surface)
 
             if game_state == "playing":
                 remaining -= delta_time
                 player.follow(camera_position)
+                if hand_state is not None:
+                    player.radius = hand_state.radius
                 spawn_elapsed += delta_time
-                if spawn_elapsed >= ajustes.SPAWN_INTERVAL:
+                target_bottles = ajustes.LEVELS[level_index]["bottles_to_collect"]
+                if (
+                    level_bottles < target_bottles
+                    and spawn_elapsed >= ajustes.SPAWN_INTERVAL
+                ):
                     objects.append(spawn_object())
                     spawn_elapsed -= ajustes.SPAWN_INTERVAL
 
-                level_complete = False
                 for falling_object in objects:
                     falling_object.update(delta_time)
+                    if falling_object.crushed:
+                        continue
+                    if hand_state is None:
+                        falling_object.hand_touched_open = False
+                        continue
+
                     distance = math.hypot(
                         falling_object.x - player.x,
                         falling_object.y - player.y,
                     )
-                    if distance < falling_object.radius + player.radius * 0.72:
-                        if falling_object.kind == "bottle":
-                            level_bottles += 1
-                            total_bottles += 1
-                            collect_sound.play()
-                            if level_bottles >= ajustes.LEVELS[level_index]["bottles_to_collect"]:
-                                level_complete = True
-                                falling_object.y = (
-                                    ajustes.WINDOW_HEIGHT + falling_object.radius
-                                )
-                                break
-                        else:
-                            lives -= 1
-                            hit_sound.play()
-                        falling_object.y = ajustes.WINDOW_HEIGHT + falling_object.radius
+                    touch_distance = falling_object.radius + hand_state.radius
+                    if falling_object.kind == "bottle":
+                        if hand_state.is_open:
+                            if distance < touch_distance:
+                                falling_object.hand_touched_open = True
+                            elif distance > (
+                                touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
+                            ):
+                                falling_object.hand_touched_open = False
+                        elif falling_object.hand_touched_open:
+                            if distance < (
+                                touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
+                            ):
+                                if falling_object.crush():
+                                    level_bottles += 1
+                                    total_bottles += 1
+                                    collect_sound.play()
+                            else:
+                                falling_object.hand_touched_open = False
+                    elif hand_state.is_open and distance < touch_distance:
+                        lives -= 1
+                        hit_sound.play()
+                        falling_object.y = (
+                            ajustes.WINDOW_HEIGHT + falling_object.radius
+                        )
 
                 objects = [
                     falling_object
@@ -414,6 +457,10 @@ def main():
                     if falling_object.y < ajustes.WINDOW_HEIGHT + falling_object.radius
                 ]
 
+                level_complete = (
+                    level_bottles >= target_bottles
+                    and not any(falling_object.crushed for falling_object in objects)
+                )
                 if level_complete:
                     if level_index == len(ajustes.LEVELS) - 1:
                         result_state = "won"
@@ -428,7 +475,12 @@ def main():
                     game_state = "enter_name"
 
             for falling_object in objects:
-                falling_object.draw(screen, bottle_sprite, battery_sprite)
+                falling_object.draw(
+                    screen,
+                    bottle_sprite,
+                    battery_sprite,
+                    crushed_bottle_sprite,
+                )
             draw_hud(
                 screen,
                 font,
@@ -458,11 +510,19 @@ def main():
                     (ajustes.WINDOW_WIDTH // 2, 151),
                     centered=True,
                 )
+                draw_text(
+                    screen,
+                    "Toca la botella con la mano abierta y cierra la mano",
+                    small_font,
+                    level["text_color"],
+                    (ajustes.WINDOW_WIDTH // 2, 190),
+                    centered=True,
+                )
 
             if camera_position is None and game_state == "playing":
                 draw_text(
                     screen,
-                    "No detecto el elemento verde",
+                    "No detecto la mano",
                     small_font,
                     ajustes.WARNING_COLOR,
                     (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 52),
@@ -470,7 +530,7 @@ def main():
                 )
                 draw_text(
                     screen,
-                    "Mostralo con buena luz y frente a la cámara",
+                    "Muestra la mano abierta frente a la cámara",
                     small_font,
                     ajustes.WARNING_COLOR,
                     (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 22),
