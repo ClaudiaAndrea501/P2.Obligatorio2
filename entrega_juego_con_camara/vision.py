@@ -21,22 +21,25 @@ class HandState(NamedTuple):
     radius: int
 
 
-def prepare_camera_frame(frame):
+def prepare_camera_frame(frame, output_size):
     mirrored_frame = cv2.flip(frame, 1)
     rgb_background = cv2.cvtColor(mirrored_frame, cv2.COLOR_BGR2RGB)
-    background_frame = cv2.resize(
-        rgb_background,
-        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
-        interpolation=(
-            cv2.INTER_AREA
-            if mirrored_frame.shape[1] > ajustes.WINDOW_WIDTH
-            or mirrored_frame.shape[0] > ajustes.WINDOW_HEIGHT
-            else cv2.INTER_CUBIC
-        ),
-    )
+    if (mirrored_frame.shape[1], mirrored_frame.shape[0]) == output_size:
+        background_frame = rgb_background
+    else:
+        background_frame = cv2.resize(
+            rgb_background,
+            output_size,
+            interpolation=(
+                cv2.INTER_AREA
+                if output_size[0] < mirrored_frame.shape[1]
+                or output_size[1] < mirrored_frame.shape[0]
+                else cv2.INTER_LINEAR
+            ),
+        )
     camera_surface = pygame.image.frombuffer(
         background_frame.tobytes(),
-        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
+        output_size,
         "RGB",
     ).copy()
     return rgb_background, camera_surface
@@ -78,7 +81,7 @@ def hand_state_from_landmarks(landmarks):
 
 
 class Vision:
-    def __init__(self, camera_index):
+    def __init__(self, camera_index, output_size):
         if not ajustes.HAND_MODEL_PATH.is_file():
             raise FileNotFoundError(
                 f"No se encontro el modelo de deteccion de manos: "
@@ -99,6 +102,7 @@ class Vision:
         self.cap = cv2.VideoCapture(camera_index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, ajustes.CAMERA_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, ajustes.CAMERA_HEIGHT)
+        self.output_size = output_size
         self._last_frame_timestamp_ms = 0
         self._camera_surface = None
 
@@ -116,7 +120,10 @@ class Vision:
             self._camera_surface = None
             return None
 
-        rgb_background, self._camera_surface = prepare_camera_frame(frame)
+        rgb_background, self._camera_surface = prepare_camera_frame(
+            frame,
+            self.output_size,
+        )
         self._last_frame_timestamp_ms = max(
             self._last_frame_timestamp_ms + 1,
             time.monotonic_ns() // 1_000_000,

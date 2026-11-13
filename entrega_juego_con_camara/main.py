@@ -244,11 +244,30 @@ def qualifies_for_ranking(ranking, score):
     )
 
 
-def draw_camera_background(surface, camera_surface):
-    if camera_surface is None:
-        surface.fill((0, 0, 0))
-    else:
-        surface.blit(camera_surface, (0, 0))
+def create_hud_background():
+    width, height = ajustes.WINDOW_WIDTH, 112
+    background = pygame.Surface((width, height))
+    start_color = (255, 211, 76)
+    end_color = (255, 151, 77)
+    for x in range(width):
+        ratio = x / max(1, width - 1)
+        color = tuple(
+            round(start + (end - start) * ratio)
+            for start, end in zip(start_color, end_color)
+        )
+        pygame.draw.line(background, color, (x, 0), (x, height - 1))
+    return background
+
+
+def draw_life_heart(surface, center, color):
+    x, y = center
+    pygame.draw.circle(surface, color, (x - 5, y - 3), 5)
+    pygame.draw.circle(surface, color, (x + 5, y - 3), 5)
+    pygame.draw.polygon(
+        surface,
+        color,
+        [(x - 10, y), (x + 10, y), (x, y + 12)],
+    )
 
 
 def draw_hud(
@@ -260,80 +279,109 @@ def draw_hud(
     remaining,
     game_state,
     bottle_hud_sprites,
+    hud_background,
 ):
     level = ajustes.LEVELS[level_index]
-    hud_height = 112
-    hud_color = ajustes.BOTTLE_CAP_COLOR[:3]
-    pygame.draw.rect(surface, (255, 255, 255), (0, 0, ajustes.WINDOW_WIDTH, hud_height))
-    pygame.draw.line(
-        surface,
-        hud_color,
-        (0, hud_height - 1),
-        (ajustes.WINDOW_WIDTH, hud_height - 1),
-        2,
+    hud_color = (0, 82, 54)
+    warning_color = (131, 49, 37)
+    surface.blit(hud_background, (0, 0))
+    pygame.draw.line(surface, (255, 244, 194), (0, 109), (ajustes.WINDOW_WIDTH, 109), 3)
+    info_cards = (
+        pygame.Rect(18, 8, 270, 34),
+        pygame.Rect(300, 8, 270, 34),
+        pygame.Rect(582, 8, 270, 34),
     )
+    warning_active = (
+        game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS
+    )
+    for card in info_cards:
+        pygame.draw.rect(
+            surface,
+            (255, 236, 215) if warning_active and card == info_cards[2] else (255, 250, 224),
+            card,
+            border_radius=12,
+        )
     draw_text(
         surface,
         f"BOTELLAS  {level_bottles}/{level['bottles_to_collect']}",
         small_font,
         hud_color,
-        (24, 10),
-    )
-    draw_text(
-        surface,
-        "APLASTA:",
-        small_font,
-        hud_color,
-        (24, 43),
-    )
-    target_sprite = bottle_hud_sprites[level["bottle_variant"]]
-    surface.blit(target_sprite, target_sprite.get_rect(topleft=(141, 41)))
-    draw_text(
-        surface,
-        level["name"],
-        small_font,
-        hud_color,
-        (174, 43),
-    )
-    draw_text(
-        surface,
-        f"VIDAS  {'♥ ' * lives}",
-        small_font,
-        hud_color,
-        (24, 76),
+        info_cards[0].center,
+        centered=True,
     )
     draw_text(
         surface,
         f"NIVEL {level_index + 1}/{len(ajustes.LEVELS)}",
         small_font,
         hud_color,
-        (365, 10),
+        info_cards[1].center,
+        centered=True,
     )
     draw_text(
         surface,
         f"TIEMPO  {max(0, math.ceil(remaining)):02d}",
         small_font,
-        hud_color,
-        (860, 10),
-        right_aligned=True,
+        warning_color if warning_active else hud_color,
+        info_cards[2].center,
+        centered=True,
     )
-    if game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS:
-        draw_text(
-            surface,
-            "¡ÚLTIMOS SEGUNDOS!",
-            small_font,
-            hud_color,
-            (ajustes.WINDOW_WIDTH - 24, 52),
-            right_aligned=True,
-        )
-    ranking_button = pygame.Rect(RANKING_BUTTON_RECT)
-    pygame.draw.rect(
+    target_card = pygame.Rect(18, 50, 620, 52)
+    lives_card = pygame.Rect(654, 50, 288, 52)
+    for card in (target_card, lives_card):
+        pygame.draw.rect(surface, (255, 250, 224), card, border_radius=15)
+    target_sprite = bottle_hud_sprites[level["bottle_variant"]]
+    target_label_width = small_font.size("APLASTA:")[0]
+    target_name_width = small_font.size(level["name"])[0]
+    target_sprite_width = target_sprite.get_width()
+    target_content_width = (
+        target_label_width + 12 + target_sprite_width + 8 + target_name_width
+    )
+    target_left = target_card.centerx - target_content_width // 2
+    target_center_y = target_card.centery
+    draw_text(
         surface,
+        "APLASTA:",
+        small_font,
         hud_color,
-        ranking_button,
-        border_radius=7,
+        (target_left + target_label_width // 2, target_center_y),
+        centered=True,
     )
-    trophy_color = (255, 255, 255)
+    sprite_left = target_left + target_label_width + 12
+    surface.blit(
+        target_sprite,
+        target_sprite.get_rect(
+            midleft=(sprite_left, target_center_y),
+        ),
+    )
+    draw_text(
+        surface,
+        level["name"],
+        small_font,
+        hud_color,
+        (
+            sprite_left + target_sprite_width + 8 + target_name_width // 2,
+            target_center_y,
+        ),
+        centered=True,
+    )
+    lives_label_width = small_font.size("VIDAS")[0]
+    hearts_width = (lives - 1) * 36 + 20 if lives else 0
+    lives_content_width = lives_label_width + (16 + hearts_width if lives else 0)
+    lives_left = lives_card.centerx - lives_content_width // 2
+    draw_text(
+        surface,
+        "VIDAS",
+        small_font,
+        hud_color,
+        (lives_left + lives_label_width // 2, lives_card.centery),
+        centered=True,
+    )
+    for index in range(lives):
+        heart_x = lives_left + lives_label_width + 16 + 10 + index * 36
+        draw_life_heart(surface, (heart_x, lives_card.centery), (224, 74, 73))
+    ranking_button = pygame.Rect(RANKING_BUTTON_RECT)
+    pygame.draw.rect(surface, (0, 102, 69), ranking_button, border_radius=12)
+    trophy_color = (255, 218, 91)
     pygame.draw.polygon(
         surface,
         trophy_color,
@@ -373,7 +421,7 @@ def draw_hud(
     )
 
     pause_button = pygame.Rect(PAUSE_BUTTON_RECT)
-    pygame.draw.rect(surface, hud_color, pause_button, border_radius=7)
+    pygame.draw.rect(surface, (0, 102, 69), pause_button, border_radius=12)
     if game_state == "paused":
         pygame.draw.polygon(
             surface,
@@ -407,49 +455,92 @@ def draw_ranking_overlay(
     personal_score=None,
     return_to_game=False,
 ):
-    overlay_rect = pygame.Rect(
-        0,
-        112,
-        ajustes.WINDOW_WIDTH,
-        ajustes.WINDOW_HEIGHT - 112,
+    panel = pygame.Rect(128, 126, 704, 470)
+    pygame.draw.rect(surface, (16, 42, 30), panel.move(0, 7), border_radius=24)
+    pygame.draw.rect(surface, (255, 250, 232), panel, border_radius=24)
+    pygame.draw.rect(surface, (0, 116, 72), panel, width=3, border_radius=24)
+    header = pygame.Rect(panel.left, panel.top, panel.width, 92)
+    pygame.draw.rect(
+        surface,
+        (239, 133, 57),
+        header,
+        border_top_left_radius=22,
+        border_top_right_radius=22,
     )
-    overlay = pygame.Surface(overlay_rect.size, pygame.SRCALPHA)
-    overlay.fill((5, 9, 24, 215))
-    surface.blit(overlay, overlay_rect.topleft)
+    pygame.draw.rect(
+        surface,
+        (255, 207, 72),
+        (panel.left, header.bottom - 8, panel.width, 8),
+    )
     draw_text(
         surface,
-        "MEJORES 5 JUGADORES",
+        "RANKING DE JUGADORES",
         font,
-        ajustes.BOTTLE_EDGE_COLOR[:3],
-        (ajustes.WINDOW_WIDTH // 2, 150),
+        (255, 255, 255),
+        (panel.centerx, panel.top + 34),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "LOS 5 MEJORES",
+        small_font,
+        (255, 247, 215),
+        (panel.centerx, panel.top + 68),
         centered=True,
     )
     for index, entry in enumerate(ranking):
-        line = f"{index + 1:>2}.  {entry['name']:<16}  {entry['score']:>3} botellas"
+        row = pygame.Rect(
+            panel.left + 28,
+            panel.top + 112 + index * 49,
+            panel.width - 56,
+            42,
+        )
+        row_color = (255, 255, 255) if index % 2 == 0 else (238, 247, 235)
+        pygame.draw.rect(surface, row_color, row, border_radius=12)
+        rank_color = (238, 165, 48) if index == 0 else (59, 145, 105)
+        pygame.draw.circle(surface, rank_color, (row.left + 23, row.centery), 15)
         draw_text(
             surface,
-            line,
+            str(index + 1),
             small_font,
-            ajustes.WHITE,
-            (ajustes.WINDOW_WIDTH // 2, 205 + index * 38),
+            (255, 255, 255),
+            (row.left + 23, row.centery),
             centered=True,
+        )
+        name_image = small_font.render(entry["name"], True, (0, 76, 52))
+        surface.blit(name_image, name_image.get_rect(midleft=(row.left + 52, row.centery)))
+        score_image = small_font.render(
+            f"{entry['score']} botellas",
+            True,
+            (0, 76, 52),
+        )
+        surface.blit(
+            score_image,
+            score_image.get_rect(midright=(row.right - 18, row.centery)),
         )
     if not ranking:
         draw_text(
             surface,
             "Aun no hay puntajes guardados.",
             small_font,
-            ajustes.WHITE,
-            (ajustes.WINDOW_WIDTH // 2, 210),
+            (0, 76, 52),
+            (panel.centerx, panel.top + 190),
             centered=True,
         )
     if personal_score is not None:
+        score_box = pygame.Rect(
+            panel.left + 28,
+            panel.bottom - 80,
+            panel.width - 56,
+            42,
+        )
+        pygame.draw.rect(surface, (255, 225, 133), score_box, border_radius=13)
         draw_text(
             surface,
             f"Tu puntaje: {personal_score} botellas",
             small_font,
-            ajustes.WHITE,
-            (ajustes.WINDOW_WIDTH // 2, 430),
+            (0, 76, 52),
+            score_box.center,
             centered=True,
         )
     prompt = (
@@ -461,36 +552,39 @@ def draw_ranking_overlay(
         surface,
         prompt,
         small_font,
-        ajustes.WHITE,
-        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 36),
+        (0, 76, 52),
+        (panel.centerx, panel.bottom - 24),
         centered=True,
     )
 
 
 def draw_pause_overlay(surface, font, small_font):
-    overlay_rect = pygame.Rect(
-        0,
-        112,
-        ajustes.WINDOW_WIDTH,
-        ajustes.WINDOW_HEIGHT - 112,
+    panel = pygame.Rect(160, 222, 640, 210)
+    pygame.draw.rect(surface, (16, 42, 30), panel.move(0, 7), border_radius=24)
+    pygame.draw.rect(surface, (255, 250, 232), panel, border_radius=24)
+    pygame.draw.rect(surface, (0, 116, 72), panel, width=3, border_radius=24)
+    header = pygame.Rect(panel.left, panel.top, panel.width, 76)
+    pygame.draw.rect(
+        surface,
+        (239, 133, 57),
+        header,
+        border_top_left_radius=22,
+        border_top_right_radius=22,
     )
-    overlay = pygame.Surface(overlay_rect.size, pygame.SRCALPHA)
-    overlay.fill((5, 9, 24, 165))
-    surface.blit(overlay, overlay_rect.topleft)
     draw_text(
         surface,
         "JUEGO EN PAUSA",
         font,
-        ajustes.WHITE,
-        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2),
+        (255, 255, 255),
+        (panel.centerx, panel.top + 38),
         centered=True,
     )
     draw_text(
         surface,
         "Pulsa el botón de pausa para continuar",
         small_font,
-        ajustes.WHITE,
-        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 48),
+        (0, 76, 52),
+        (panel.centerx, panel.top + 138),
         centered=True,
     )
 
@@ -509,11 +603,16 @@ def main():
         ajustes.WINDOW_HEIGHT,
     )
     display = pygame.display.set_mode(display_size, display_flags)
-    screen = pygame.Surface((ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT))
+    screen = pygame.Surface(
+        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
+        pygame.SRCALPHA,
+    )
+    display_overlay = pygame.Surface(display.get_size(), pygame.SRCALPHA)
     pygame.display.set_caption(ajustes.WINDOW_TITLE)
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, ajustes.FONT_SIZE)
     small_font = pygame.font.Font(None, ajustes.SMALL_FONT_SIZE)
+    hud_background = create_hud_background()
     collect_sound = pygame.mixer.Sound(str(ajustes.SOUND_COLLECT_PATH))
     hit_sound = pygame.mixer.Sound(str(ajustes.SOUND_HIT_PATH))
     collect_sound.set_volume(0.45)
@@ -532,7 +631,7 @@ def main():
     }
     ranking = load_ranking()
 
-    vision = Vision(ajustes.CAMERA_INDEX)
+    vision = Vision(ajustes.CAMERA_INDEX, display.get_size())
     if not vision.is_opened:
         vision.release()
         pygame.quit()
@@ -630,7 +729,7 @@ def main():
 
             hand_state = vision.read_hand_state()
             camera_position = hand_state.position if hand_state is not None else None
-            draw_camera_background(screen, vision.camera_surface)
+            screen.fill((0, 0, 0, 0))
 
             if game_state == "playing" and not ranking_open:
                 remaining -= delta_time
@@ -730,6 +829,7 @@ def main():
                 remaining,
                 game_state,
                 bottle_hud_sprites,
+                hud_background,
             )
 
             if level_banner_time > 0 and game_state == "playing":
@@ -788,54 +888,71 @@ def main():
             elif game_state == "paused":
                 draw_pause_overlay(screen, font, small_font)
             elif game_state == "enter_name":
-                overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-                overlay.fill((5, 9, 24, 210))
-                screen.blit(overlay, (0, 0))
+                panel = pygame.Rect(145, 140, 670, 360)
+                pygame.draw.rect(screen, (16, 42, 30), panel.move(0, 7), border_radius=24)
+                pygame.draw.rect(screen, (255, 250, 232), panel, border_radius=24)
+                pygame.draw.rect(screen, (0, 116, 72), panel, width=3, border_radius=24)
+                header = pygame.Rect(panel.left, panel.top, panel.width, 88)
+                pygame.draw.rect(
+                    screen,
+                    (239, 133, 57),
+                    header,
+                    border_top_left_radius=22,
+                    border_top_right_radius=22,
+                )
+                pygame.draw.rect(
+                    screen,
+                    (255, 207, 72),
+                    (panel.left, header.bottom - 8, panel.width, 8),
+                )
                 headline = (
                     "¡PLANETA LIMPIO!"
                     if result_state == "won"
                     else "SE ACABÓ EL TIEMPO O LAS VIDAS"
                 )
                 color = (
-                    ajustes.BOTTLE_EDGE_COLOR[:3]
+                    (255, 255, 255)
                     if result_state == "won"
-                    else ajustes.WARNING_COLOR
+                    else (255, 246, 223)
                 )
                 draw_text(
                     screen,
                     headline,
-                    font,
+                    font if result_state == "won" else small_font,
                     color,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 - 35),
+                    (panel.centerx, panel.top + 44),
                     centered=True,
                 )
+                score_box = pygame.Rect(panel.left + 72, panel.top + 112, panel.width - 144, 48)
+                pygame.draw.rect(screen, (255, 225, 133), score_box, border_radius=14)
                 draw_text(
                     screen,
                     f"Puntaje: {total_bottles} botellas",
                     small_font,
-                    ajustes.WHITE,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 4),
+                    (0, 76, 52),
+                    score_box.center,
                     centered=True,
                 )
                 draw_text(
                     screen,
                     "Escribe tu nombre y presiona Enter:",
                     small_font,
-                    ajustes.WHITE,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 48),
+                    (0, 76, 52),
+                    (panel.centerx, panel.top + 190),
                     centered=True,
                 )
                 name_box = pygame.Rect(
-                    ajustes.WINDOW_WIDTH // 2 - 190,
-                    ajustes.WINDOW_HEIGHT // 2 + 72,
-                    380,
+                    panel.centerx - 210,
+                    panel.top + 220,
+                    420,
                     48,
                 )
-                pygame.draw.rect(screen, (245, 250, 255), name_box, border_radius=8)
+                pygame.draw.rect(screen, (255, 255, 255), name_box, border_radius=12)
+                pygame.draw.rect(screen, (69, 160, 112), name_box, width=2, border_radius=12)
                 name_image = small_font.render(
                     player_name or "Tu nombre",
                     True,
-                    (24, 73, 113) if player_name else (120, 139, 155),
+                    (0, 76, 52) if player_name else (120, 139, 155),
                 )
                 screen.blit(name_image, name_image.get_rect(center=name_box.center))
                 if name_entry_error:
@@ -843,8 +960,8 @@ def main():
                         screen,
                         name_entry_error,
                         small_font,
-                        ajustes.WARNING_COLOR,
-                        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 146),
+                        (164, 64, 46),
+                        (panel.centerx, panel.bottom - 22),
                         centered=True,
                     )
 
@@ -859,7 +976,16 @@ def main():
                     ),
                 )
 
-            pygame.transform.smoothscale(screen, display.get_size(), display)
+            if vision.camera_surface is None:
+                display.fill((0, 0, 0))
+            else:
+                display.blit(vision.camera_surface, (0, 0))
+            pygame.transform.smoothscale(
+                screen,
+                display.get_size(),
+                display_overlay,
+            )
+            display.blit(display_overlay, (0, 0))
             pygame.display.flip()
     finally:
         vision.release()

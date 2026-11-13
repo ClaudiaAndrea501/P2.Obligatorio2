@@ -17,11 +17,11 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-La camara debe estar conectada y tener permiso de uso. Si el sistema usa otra cámara, cambia `CAMERA_INDEX` en `ajustes.py`. El juego solicita video a 1280 x 720 para mejorar la nitidez; la resolución efectiva depende de lo que admita la webcam.
+La camara debe estar conectada y tener permiso de uso. Si el sistema usa otra cámara, cambia `CAMERA_INDEX` en `ajustes.py`. El juego solicita video a 1280 x 720 para mejorar la nitidez; la resolución efectiva depende de lo que admita la webcam. La imagen se muestra directamente a resolución de pantalla y sin filtros de suavizado.
 
 ## Como jugar
 
-1. La imagen espejada de la cámara y el juego se ajustan a toda la pantalla, sin franjas negras laterales. La información aparece en una franja superior fina, blanca y opaca, con textos verdes distribuidos en filas parejas.
+1. La imagen espejada de la cámara y el juego se ajustan a toda la pantalla, sin franjas negras laterales. La franja superior tiene un degradado cálido y tarjetas de información para facilitar la lectura.
 2. Abre la mano para mover el punto de contacto y ciérrala para aplastar la botella que tocaste.
 3. Cada nivel indica la botella objetivo con una imagen y su nombre. Aplastar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
    Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia.
@@ -34,8 +34,8 @@ La camara debe estar conectada y tener permiso de uso. Si el sistema usa otra c�
    - Sabor manzana (marrón claro): 14 en 53 segundos.
    - Sabor frutilla (rojo): 16 en 58 segundos.
    - Sabor naranja: 18 en 63 segundos.
-5. Si tu puntaje entra entre los cinco mejores, escribe tu nombre y presiona `Enter` para guardarlo. Si no entra, verás el ranking y tu puntaje sin tener que escribir tu nombre.
-6. Pulsa la copa de la franja superior para consultar el ranking durante la partida; la partida queda pausada mientras lo ves. Vuelve a pulsar la copa para regresar.
+5. Si tu puntaje entra entre los cinco mejores, escribe tu nombre y presiona `Enter` para guardarlo. Si no entra, verás el ranking y tu puntaje en una tarjeta de resultados colorida.
+6. Pulsa la copa de la franja superior para consultar el ranking durante la partida; la partida queda pausada mientras lo ves. Vuelve a pulsar la copa para regresar. El ranking se muestra en una tarjeta sobre la cámara, sin modificar la imagen de video.
 7. Usa el botón de pausa de la franja superior o la tecla `P` para pausar y reanudar.
 8. En el ranking final, presiona `R` para volver a jugar sin cerrar la ventana.
 9. Si aparece el aviso de detección, mejora la iluminación y coloca la mano completa frente a la cámara.
