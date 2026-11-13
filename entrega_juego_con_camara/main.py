@@ -25,6 +25,11 @@ class Player:
 class FallingObject:
     def __init__(self, kind):
         self.kind = kind
+        self.bottle_variant = (
+            random.choice(tuple(ajustes.BOTTLE_VARIANTS))
+            if kind == "bottle"
+            else None
+        )
         self.x = random.randint(ajustes.OBJECT_RADIUS, ajustes.WINDOW_WIDTH - ajustes.OBJECT_RADIUS)
         self.y = -ajustes.OBJECT_RADIUS
         self.crushed = False
@@ -49,10 +54,17 @@ class FallingObject:
         if self.kind == "bottle":
             self.x += math.sin(self.phase) * ajustes.BOTTLE_SWAY * delta_time
 
-    def draw(self, surface, bottle_sprite, battery_sprite, crushed_bottle_sprite):
+    def draw(
+        self,
+        surface,
+        bottle_sprites,
+        battery_sprite,
+        crushed_bottle_sprites,
+    ):
         center = (int(self.x), int(self.y))
         if self.kind == "bottle":
-            sprite = crushed_bottle_sprite if self.crushed else bottle_sprite
+            sprites = crushed_bottle_sprites if self.crushed else bottle_sprites
+            sprite = sprites[self.bottle_variant]
             surface.blit(sprite, sprite.get_rect(center=center))
         else:
             surface.blit(battery_sprite, battery_sprite.get_rect(center=center))
@@ -65,7 +77,7 @@ class FallingObject:
         return True
 
 
-def create_bottle_sprite():
+def create_bottle_sprite(body_color, edge_color, cap_color, cap_edge_color):
     scale = 3
     width, height = ajustes.BOTTLE_SPRITE_SIZE
     sprite = pygame.Surface((width * scale, height * scale), pygame.SRCALPHA)
@@ -87,26 +99,26 @@ def create_bottle_sprite():
         point(9, 20),
         point(13, 16),
     ]
-    pygame.draw.polygon(sprite, ajustes.BOTTLE_BODY_COLOR, body)
-    pygame.draw.polygon(sprite, ajustes.BOTTLE_EDGE_COLOR, body, max(1, scale))
-    pygame.draw.rect(sprite, ajustes.BOTTLE_BODY_COLOR, (*point(13, 8), 10 * scale, 8 * scale))
+    pygame.draw.polygon(sprite, body_color, body)
+    pygame.draw.polygon(sprite, edge_color, body, max(1, scale))
+    pygame.draw.rect(sprite, body_color, (*point(13, 8), 10 * scale, 8 * scale))
     pygame.draw.rect(
         sprite,
-        ajustes.BOTTLE_EDGE_COLOR,
+        edge_color,
         (*point(13, 8), 10 * scale, 8 * scale),
         max(1, scale),
     )
-    pygame.draw.rect(sprite, ajustes.BOTTLE_CAP_COLOR, (*point(11, 2), 14 * scale, 8 * scale))
+    pygame.draw.rect(sprite, cap_color, (*point(11, 2), 14 * scale, 8 * scale))
     pygame.draw.rect(
         sprite,
-        ajustes.BOTTLE_CAP_EDGE_COLOR,
+        cap_edge_color,
         (*point(11, 2), 14 * scale, 8 * scale),
         max(1, scale),
     )
     for x in range(13, 25, 3):
         pygame.draw.line(
             sprite,
-            ajustes.BOTTLE_CAP_EDGE_COLOR,
+            cap_edge_color,
             point(x, 3),
             point(x, 8),
             max(1, scale // 2),
@@ -331,8 +343,14 @@ def main():
     hit_sound = pygame.mixer.Sound(str(ajustes.SOUND_HIT_PATH))
     collect_sound.set_volume(0.45)
     hit_sound.set_volume(0.55)
-    bottle_sprite = create_bottle_sprite()
-    crushed_bottle_sprite = create_crushed_bottle_sprite(bottle_sprite)
+    bottle_sprites = {
+        variant: create_bottle_sprite(*colors)
+        for variant, colors in ajustes.BOTTLE_VARIANTS.items()
+    }
+    crushed_bottle_sprites = {
+        variant: create_crushed_bottle_sprite(sprite)
+        for variant, sprite in bottle_sprites.items()
+    }
     battery_sprite = create_battery_sprite()
     ranking = load_ranking()
 
@@ -477,9 +495,9 @@ def main():
             for falling_object in objects:
                 falling_object.draw(
                     screen,
-                    bottle_sprite,
+                    bottle_sprites,
                     battery_sprite,
-                    crushed_bottle_sprite,
+                    crushed_bottle_sprites,
                 )
             draw_hud(
                 screen,

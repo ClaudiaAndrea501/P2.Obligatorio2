@@ -23,6 +23,7 @@ La camara debe estar conectada y tener permiso de uso. Si el sistema usa otra c�
 
 1. La imagen espejada de la cámara ocupa toda la pantalla. Los objetos del juego y los puntajes aparecen encima, sin cielo ni nubes dibujados.
 2. Abre la mano para mover el punto de contacto. Toca una botella con la mano abierta y cierra la mano para aplastarla; no importa el color de la mano.
+   Aparecen ocho variantes: verde, beige, amarillo, naranja, marrón claro, rosado y rojo con tapa verde, además de una verde con tapa azul. Cada una tiene su versión aplastada.
 3. Las botellas aplastadas suman puntos. Tocar una pila con la mano abierta resta una vida. En la vida real, las pilas usadas se llevan a un punto de recepción de pilas para que reciban un tratamiento separado; no van con las botellas ni al contenedor común.
 4. Para avanzar necesitas juntar 6 botellas por la mañana, 12 al mediodía, 18 por la tarde y 24 por la noche. Tienes tres vidas y 75 segundos para completar los cuatro niveles.
 5. Al ganar o perder, escribe tu nombre y presiona `Enter`. Se guardará tu puntaje total de botellas y se mostrará el ranking local de los 5 mejores resultados.
@@ -40,7 +41,7 @@ La musica no es necesaria: el juego incluye dos efectos de sonido, uno para reco
 
 ## Estructura
 
-- `main.py`: bucle principal, reglas, objetos y dibujo.
+- `main.py`: bucle principal, reglas, objetos y dibujo de las ocho variantes de botella.
 - `vision.py`: apertura de la cámara y detección de posición y gesto de la mano.
 - `ajustes.py`: parámetros del juego y de la cámara.
 - `assets/models/hand_landmarker.task`: modelo de detección de manos de MediaPipe.
