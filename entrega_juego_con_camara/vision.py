@@ -21,6 +21,27 @@ class HandState(NamedTuple):
     radius: int
 
 
+def prepare_camera_frame(frame):
+    mirrored_frame = cv2.flip(frame, 1)
+    rgb_background = cv2.cvtColor(mirrored_frame, cv2.COLOR_BGR2RGB)
+    background_frame = cv2.resize(
+        rgb_background,
+        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
+        interpolation=(
+            cv2.INTER_AREA
+            if mirrored_frame.shape[1] > ajustes.WINDOW_WIDTH
+            or mirrored_frame.shape[0] > ajustes.WINDOW_HEIGHT
+            else cv2.INTER_CUBIC
+        ),
+    )
+    camera_surface = pygame.image.frombuffer(
+        background_frame.tobytes(),
+        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
+        "RGB",
+    ).copy()
+    return rgb_background, camera_surface
+
+
 def hand_state_from_landmarks(landmarks):
     screen_points = [
         (
@@ -95,38 +116,7 @@ class Vision:
             self._camera_surface = None
             return None
 
-        mirrored_frame = cv2.flip(frame, 1)
-        frame_height, frame_width = mirrored_frame.shape[:2]
-        scale = max(
-            ajustes.WINDOW_WIDTH / frame_width,
-            ajustes.WINDOW_HEIGHT / frame_height,
-        )
-        visible_width = ajustes.WINDOW_WIDTH / scale
-        visible_height = ajustes.WINDOW_HEIGHT / scale
-        crop_left = round((frame_width - visible_width) / 2)
-        crop_top = round((frame_height - visible_height) / 2)
-        crop_right = round(crop_left + visible_width)
-        crop_bottom = round(crop_top + visible_height)
-        crop = mirrored_frame[
-            crop_top:crop_bottom,
-            crop_left:crop_right,
-        ]
-        rgb_background = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
-        background_frame = cv2.resize(
-            rgb_background,
-            (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
-            interpolation=(
-                cv2.INTER_AREA
-                if crop.shape[1] > ajustes.WINDOW_WIDTH
-                or crop.shape[0] > ajustes.WINDOW_HEIGHT
-                else cv2.INTER_CUBIC
-            ),
-        )
-        self._camera_surface = pygame.image.frombuffer(
-            background_frame.tobytes(),
-            (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
-            "RGB",
-        ).copy()
+        rgb_background, self._camera_surface = prepare_camera_frame(frame)
         self._last_frame_timestamp_ms = max(
             self._last_frame_timestamp_ms + 1,
             time.monotonic_ns() // 1_000_000,

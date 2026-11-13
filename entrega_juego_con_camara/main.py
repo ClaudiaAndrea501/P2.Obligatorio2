@@ -9,6 +9,10 @@ import ajustes
 from vision import Vision
 
 
+RANKING_BUTTON_RECT = (914, 7, 38, 38)
+PAUSE_BUTTON_RECT = (870, 7, 38, 38)
+
+
 class Player:
     def __init__(self):
         self.x = ajustes.WINDOW_WIDTH / 2
@@ -23,54 +27,64 @@ class Player:
         self.y += (target_y - self.y) * ajustes.PLAYER_SMOOTHING
 
 class FallingObject:
-    def __init__(self, kind):
-        self.kind = kind
-        self.bottle_variant = (
-            random.choice(tuple(ajustes.BOTTLE_VARIANTS))
-            if kind == "bottle"
-            else None
-        )
-        self.x = random.randint(ajustes.OBJECT_RADIUS, ajustes.WINDOW_WIDTH - ajustes.OBJECT_RADIUS)
-        self.y = -ajustes.OBJECT_RADIUS
+    def __init__(self, bottle_variant):
+        self.bottle_variant = bottle_variant
+        width, height = self.bounds_size
+        self.x = random.randint(width // 2, ajustes.WINDOW_WIDTH - width // 2)
+        self.y = height // 2
         self.crushed = False
         self.crushed_time = 0.0
         self.hand_touched_open = False
-        self.radius = (
-            ajustes.BOTTLE_COLLISION_RADIUS
-            if kind == "bottle"
-            else ajustes.BATTERY_COLLISION_RADIUS
-        )
+        self.radius = ajustes.BOTTLE_COLLISION_RADIUS
         self.speed = random.uniform(*ajustes.OBJECT_SPEED_RANGE)
         self.phase = random.uniform(0, math.tau)
+
+    @property
+    def bounds_size(self):
+        return (48, ajustes.BOTTLE_SPRITE_SIZE[1])
+
+    @property
+    def sprite_size(self):
+        if self.crushed:
+            return (48, 18)
+        return ajustes.BOTTLE_SPRITE_SIZE
+
+    @property
+    def is_fully_visible(self):
+        width, height = self.sprite_size
+        rect = pygame.Rect(0, 0, width, height)
+        rect.center = (int(self.x), int(self.y))
+        return (
+            rect.left >= 0
+            and rect.top >= 0
+            and rect.right <= ajustes.WINDOW_WIDTH
+            and rect.bottom <= ajustes.WINDOW_HEIGHT
+        )
 
     def update(self, delta_time):
         if self.crushed:
             self.crushed_time = max(0, self.crushed_time - delta_time)
             if self.crushed_time == 0:
-                self.y = ajustes.WINDOW_HEIGHT + self.radius
+                self.y = ajustes.WINDOW_HEIGHT + self.sprite_size[1]
             return
         self.y += self.speed * delta_time
         self.phase += delta_time * ajustes.BOTTLE_PHASE_SPEED
-        if self.kind == "bottle":
-            self.x += math.sin(self.phase) * ajustes.BOTTLE_SWAY * delta_time
+        self.x = max(
+            self.bounds_size[0] // 2,
+            min(
+                self.x + math.sin(self.phase) * ajustes.BOTTLE_SWAY * delta_time,
+                ajustes.WINDOW_WIDTH - self.bounds_size[0] // 2,
+            ),
+        )
 
-    def draw(
-        self,
-        surface,
-        bottle_sprites,
-        battery_sprite,
-        crushed_bottle_sprites,
-    ):
+    def draw(self, surface, bottle_sprites, crushed_bottle_sprites):
         center = (int(self.x), int(self.y))
-        if self.kind == "bottle":
-            sprites = crushed_bottle_sprites if self.crushed else bottle_sprites
-            sprite = sprites[self.bottle_variant]
-            surface.blit(sprite, sprite.get_rect(center=center))
-        else:
-            surface.blit(battery_sprite, battery_sprite.get_rect(center=center))
+        sprites = crushed_bottle_sprites if self.crushed else bottle_sprites
+        sprite = sprites[self.bottle_variant]
+        surface.blit(sprite, sprite.get_rect(center=center))
 
     def crush(self):
-        if self.kind != "bottle" or self.crushed:
+        if self.crushed:
             return False
         self.crushed = True
         self.crushed_time = ajustes.CRUSHED_BOTTLE_DISPLAY_SECONDS
@@ -138,78 +152,37 @@ def create_crushed_bottle_sprite(bottle_sprite):
     return pygame.transform.smoothscale(bottle_sprite, (48, 18)).convert_alpha()
 
 
-def create_battery_sprite():
-    scale = 3
-    width, height = ajustes.BATTERY_SPRITE_SIZE
-    sprite = pygame.Surface((width * scale, height * scale), pygame.SRCALPHA)
-    body = pygame.Rect(4 * scale, 8 * scale, 30 * scale, 42 * scale)
-    pygame.draw.rect(
-        sprite,
-        ajustes.BATTERY_BODY_COLOR,
-        body,
-        border_radius=4 * scale,
-    )
-    pygame.draw.rect(
-        sprite,
-        ajustes.BATTERY_EDGE_COLOR,
-        body,
-        width=2 * scale,
-        border_radius=4 * scale,
-    )
-    pygame.draw.rect(
-        sprite,
-        ajustes.BATTERY_TERMINAL_COLOR,
-        (12 * scale, 3 * scale, 14 * scale, 6 * scale),
-        border_radius=2 * scale,
-    )
-    pygame.draw.rect(
-        sprite,
-        ajustes.BATTERY_LABEL_COLOR,
-        (7 * scale, 20 * scale, 24 * scale, 19 * scale),
-        border_radius=2 * scale,
-    )
-    warning = [
-        (19 * scale, 22 * scale),
-        (28 * scale, 36 * scale),
-        (10 * scale, 36 * scale),
-    ]
-    pygame.draw.polygon(sprite, ajustes.BATTERY_WARNING_COLOR, warning)
-    pygame.draw.polygon(
-        sprite,
-        ajustes.BATTERY_EDGE_COLOR,
-        warning,
-        width=scale,
-    )
-    pygame.draw.line(
-        sprite,
-        ajustes.BATTERY_EDGE_COLOR,
-        (19 * scale, 27 * scale),
-        (19 * scale, 32 * scale),
-        width=2 * scale,
-    )
-    pygame.draw.circle(
-        sprite,
-        ajustes.BATTERY_EDGE_COLOR,
-        (19 * scale, 34 * scale),
-        scale,
-    )
-    return pygame.transform.smoothscale(sprite, ajustes.BATTERY_SPRITE_SIZE)
-
-
-def draw_text(surface, text, font, color, position, centered=False):
+def draw_text(
+    surface,
+    text,
+    font,
+    color,
+    position,
+    centered=False,
+    right_aligned=False,
+):
     image = font.render(text, True, color)
     rect = image.get_rect()
     if centered:
         rect.center = position
+    elif right_aligned:
+        rect.topright = position
     else:
         rect.topleft = position
     surface.blit(image, rect)
     return rect
 
 
-def spawn_object():
-    kind = "bottle" if random.random() < ajustes.BOTTLE_CHANCE else "battery"
-    return FallingObject(kind)
+def spawn_object(target_variant):
+    variants = tuple(ajustes.BOTTLE_VARIANTS)
+    if random.random() < ajustes.BOTTLE_TARGET_CHANCE:
+        variant = target_variant
+    else:
+        other_variants = tuple(
+            variant for variant in variants if variant != target_variant
+        )
+        variant = random.choice(other_variants)
+    return FallingObject(variant)
 
 
 def reset_game():
@@ -219,7 +192,7 @@ def reset_game():
         0,
         0,
         ajustes.STARTING_LIVES,
-        ajustes.GAME_DURATION,
+        ajustes.LEVELS[0]["time_limit"],
         0.0,
         "playing",
     )
@@ -264,6 +237,13 @@ def save_ranking_score(ranking, player_name, score):
     return updated_ranking
 
 
+def qualifies_for_ranking(ranking, score):
+    return (
+        len(ranking) < ajustes.MAX_RANKING_ENTRIES
+        or score > ranking[-1]["score"]
+    )
+
+
 def draw_camera_background(surface, camera_surface):
     if camera_surface is None:
         surface.fill((0, 0, 0))
@@ -273,51 +253,246 @@ def draw_camera_background(surface, camera_surface):
 
 def draw_hud(
     surface,
-    font,
     small_font,
     level_index,
     level_bottles,
     lives,
     remaining,
     game_state,
+    bottle_hud_sprites,
 ):
     level = ajustes.LEVELS[level_index]
+    hud_height = 112
+    hud_color = ajustes.BOTTLE_CAP_COLOR[:3]
+    pygame.draw.rect(surface, (255, 255, 255), (0, 0, ajustes.WINDOW_WIDTH, hud_height))
+    pygame.draw.line(
+        surface,
+        hud_color,
+        (0, hud_height - 1),
+        (ajustes.WINDOW_WIDTH, hud_height - 1),
+        2,
+    )
     draw_text(
         surface,
         f"BOTELLAS  {level_bottles}/{level['bottles_to_collect']}",
         small_font,
-        level["text_color"],
-        (24, 20),
+        hud_color,
+        (24, 10),
+    )
+    draw_text(
+        surface,
+        "APLASTA:",
+        small_font,
+        hud_color,
+        (24, 43),
+    )
+    target_sprite = bottle_hud_sprites[level["bottle_variant"]]
+    surface.blit(target_sprite, target_sprite.get_rect(topleft=(141, 41)))
+    draw_text(
+        surface,
+        level["name"],
+        small_font,
+        hud_color,
+        (174, 43),
     )
     draw_text(
         surface,
         f"VIDAS  {'♥ ' * lives}",
         small_font,
-        level["text_color"],
-        (24, 54),
+        hud_color,
+        (24, 76),
     )
     draw_text(
         surface,
-        f"NIVEL {level_index + 1}/{len(ajustes.LEVELS)}  {level['name']}",
+        f"NIVEL {level_index + 1}/{len(ajustes.LEVELS)}",
         small_font,
-        level["text_color"],
-        (365, 20),
+        hud_color,
+        (365, 10),
     )
     draw_text(
         surface,
         f"TIEMPO  {max(0, math.ceil(remaining)):02d}",
         small_font,
-        level["text_color"],
-        (ajustes.WINDOW_WIDTH - 175, 20),
+        hud_color,
+        (860, 10),
+        right_aligned=True,
     )
     if game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS:
         draw_text(
             surface,
             "¡ÚLTIMOS SEGUNDOS!",
-            font,
-            ajustes.WARNING_COLOR,
-            (ajustes.WINDOW_WIDTH - 250, 54),
+            small_font,
+            hud_color,
+            (ajustes.WINDOW_WIDTH - 24, 52),
+            right_aligned=True,
         )
+    ranking_button = pygame.Rect(RANKING_BUTTON_RECT)
+    pygame.draw.rect(
+        surface,
+        hud_color,
+        ranking_button,
+        border_radius=7,
+    )
+    trophy_color = (255, 255, 255)
+    pygame.draw.polygon(
+        surface,
+        trophy_color,
+        [
+            (ranking_button.left + 11, ranking_button.top + 8),
+            (ranking_button.right - 11, ranking_button.top + 8),
+            (ranking_button.right - 13, ranking_button.top + 21),
+            (ranking_button.centerx, ranking_button.top + 26),
+            (ranking_button.left + 13, ranking_button.top + 21),
+        ],
+    )
+    pygame.draw.arc(
+        surface,
+        trophy_color,
+        pygame.Rect(ranking_button.left + 5, ranking_button.top + 10, 12, 14),
+        math.pi / 2,
+        math.pi * 1.5,
+        2,
+    )
+    pygame.draw.arc(
+        surface,
+        trophy_color,
+        pygame.Rect(ranking_button.right - 17, ranking_button.top + 10, 12, 14),
+        -math.pi / 2,
+        math.pi / 2,
+        2,
+    )
+    pygame.draw.rect(
+        surface,
+        trophy_color,
+        (ranking_button.centerx - 2, ranking_button.top + 24, 4, 5),
+    )
+    pygame.draw.rect(
+        surface,
+        trophy_color,
+        (ranking_button.centerx - 7, ranking_button.top + 29, 14, 3),
+    )
+
+    pause_button = pygame.Rect(PAUSE_BUTTON_RECT)
+    pygame.draw.rect(surface, hud_color, pause_button, border_radius=7)
+    if game_state == "paused":
+        pygame.draw.polygon(
+            surface,
+            trophy_color,
+            [
+                (pause_button.left + 13, pause_button.top + 9),
+                (pause_button.left + 13, pause_button.bottom - 9),
+                (pause_button.right - 10, pause_button.centery),
+            ],
+        )
+    else:
+        pygame.draw.rect(
+            surface,
+            trophy_color,
+            (pause_button.left + 11, pause_button.top + 10, 5, 18),
+            border_radius=1,
+        )
+        pygame.draw.rect(
+            surface,
+            trophy_color,
+            (pause_button.left + 22, pause_button.top + 10, 5, 18),
+            border_radius=1,
+        )
+
+
+def draw_ranking_overlay(
+    surface,
+    font,
+    small_font,
+    ranking,
+    personal_score=None,
+    return_to_game=False,
+):
+    overlay_rect = pygame.Rect(
+        0,
+        112,
+        ajustes.WINDOW_WIDTH,
+        ajustes.WINDOW_HEIGHT - 112,
+    )
+    overlay = pygame.Surface(overlay_rect.size, pygame.SRCALPHA)
+    overlay.fill((5, 9, 24, 215))
+    surface.blit(overlay, overlay_rect.topleft)
+    draw_text(
+        surface,
+        "MEJORES 5 JUGADORES",
+        font,
+        ajustes.BOTTLE_EDGE_COLOR[:3],
+        (ajustes.WINDOW_WIDTH // 2, 150),
+        centered=True,
+    )
+    for index, entry in enumerate(ranking):
+        line = f"{index + 1:>2}.  {entry['name']:<16}  {entry['score']:>3} botellas"
+        draw_text(
+            surface,
+            line,
+            small_font,
+            ajustes.WHITE,
+            (ajustes.WINDOW_WIDTH // 2, 205 + index * 38),
+            centered=True,
+        )
+    if not ranking:
+        draw_text(
+            surface,
+            "Aun no hay puntajes guardados.",
+            small_font,
+            ajustes.WHITE,
+            (ajustes.WINDOW_WIDTH // 2, 210),
+            centered=True,
+        )
+    if personal_score is not None:
+        draw_text(
+            surface,
+            f"Tu puntaje: {personal_score} botellas",
+            small_font,
+            ajustes.WHITE,
+            (ajustes.WINDOW_WIDTH // 2, 430),
+            centered=True,
+        )
+    prompt = (
+        "Haz clic en la copa para volver"
+        if return_to_game
+        else "Presiona R para volver a jugar"
+    )
+    draw_text(
+        surface,
+        prompt,
+        small_font,
+        ajustes.WHITE,
+        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 36),
+        centered=True,
+    )
+
+
+def draw_pause_overlay(surface, font, small_font):
+    overlay_rect = pygame.Rect(
+        0,
+        112,
+        ajustes.WINDOW_WIDTH,
+        ajustes.WINDOW_HEIGHT - 112,
+    )
+    overlay = pygame.Surface(overlay_rect.size, pygame.SRCALPHA)
+    overlay.fill((5, 9, 24, 165))
+    surface.blit(overlay, overlay_rect.topleft)
+    draw_text(
+        surface,
+        "JUEGO EN PAUSA",
+        font,
+        ajustes.WHITE,
+        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "Pulsa el botón de pausa para continuar",
+        small_font,
+        ajustes.WHITE,
+        (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT // 2 + 48),
+        centered=True,
+    )
 
 
 def main():
@@ -328,13 +503,13 @@ def main():
         pygame.quit()
         raise RuntimeError(f"No se pudo iniciar el audio: {error}") from error
 
-    display_flags = pygame.SCALED
-    if ajustes.FULLSCREEN:
-        display_flags |= pygame.FULLSCREEN
-    screen = pygame.display.set_mode(
-        (ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT),
-        display_flags,
+    display_flags = pygame.FULLSCREEN if ajustes.FULLSCREEN else 0
+    display_size = (0, 0) if ajustes.FULLSCREEN else (
+        ajustes.WINDOW_WIDTH,
+        ajustes.WINDOW_HEIGHT,
     )
+    display = pygame.display.set_mode(display_size, display_flags)
+    screen = pygame.Surface((ajustes.WINDOW_WIDTH, ajustes.WINDOW_HEIGHT))
     pygame.display.set_caption(ajustes.WINDOW_TITLE)
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, ajustes.FONT_SIZE)
@@ -347,11 +522,14 @@ def main():
         variant: create_bottle_sprite(*colors)
         for variant, colors in ajustes.BOTTLE_VARIANTS.items()
     }
+    bottle_hud_sprites = {
+        variant: pygame.transform.smoothscale(sprite, (25, 36))
+        for variant, sprite in bottle_sprites.items()
+    }
     crushed_bottle_sprites = {
         variant: create_crushed_bottle_sprite(sprite)
         for variant, sprite in bottle_sprites.items()
     }
-    battery_sprite = create_battery_sprite()
     ranking = load_ranking()
 
     vision = Vision(ajustes.CAMERA_INDEX)
@@ -368,18 +546,54 @@ def main():
     player_name = ""
     name_entry_error = ""
     result_state = ""
+    ranking_open = False
     running = True
     try:
         while running:
             delta_time = min(clock.tick(ajustes.FPS) / 1000, ajustes.MAX_DELTA_TIME)
-            level_banner_time = max(0, level_banner_time - delta_time)
+            if game_state == "playing" and not ranking_open:
+                level_banner_time = max(0, level_banner_time - delta_time)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    running = False
+                    if ranking_open:
+                        ranking_open = False
+                    else:
+                        running = False
+                elif (
+                    event.type == pygame.MOUSEBUTTONDOWN
+                    and event.button == 1
+                    and game_state in {"playing", "paused"}
+                ):
+                    mouse_x = round(
+                        event.pos[0] * ajustes.WINDOW_WIDTH / display.get_width()
+                    )
+                    mouse_y = round(
+                        event.pos[1] * ajustes.WINDOW_HEIGHT / display.get_height()
+                    )
+                    mouse_position = (mouse_x, mouse_y)
+                    if pygame.Rect(RANKING_BUTTON_RECT).collidepoint(mouse_position):
+                        ranking_open = not ranking_open
+                    elif ranking_open:
+                        ranking_open = False
+                    elif pygame.Rect(PAUSE_BUTTON_RECT).collidepoint(mouse_position):
+                        game_state = (
+                            "playing" if game_state == "paused" else "paused"
+                        )
+                        for falling_object in objects:
+                            falling_object.hand_touched_open = False
+                elif (
+                    event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_p
+                    and game_state in {"playing", "paused"}
+                    and not ranking_open
+                ):
+                    game_state = "playing" if game_state == "paused" else "paused"
+                    for falling_object in objects:
+                        falling_object.hand_touched_open = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                    if game_state == "ranking":
+                    if game_state in {"ranking", "ranking_result"}:
                         (
                             player,
                             objects,
@@ -395,6 +609,7 @@ def main():
                         player_name = ""
                         name_entry_error = ""
                         result_state = ""
+                        ranking_open = False
                 elif game_state == "enter_name" and event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_BACKSPACE:
                         player_name = player_name[:-1]
@@ -417,18 +632,19 @@ def main():
             camera_position = hand_state.position if hand_state is not None else None
             draw_camera_background(screen, vision.camera_surface)
 
-            if game_state == "playing":
+            if game_state == "playing" and not ranking_open:
                 remaining -= delta_time
                 player.follow(camera_position)
                 if hand_state is not None:
                     player.radius = hand_state.radius
                 spawn_elapsed += delta_time
-                target_bottles = ajustes.LEVELS[level_index]["bottles_to_collect"]
+                level = ajustes.LEVELS[level_index]
+                target_bottles = level["bottles_to_collect"]
                 if (
                     level_bottles < target_bottles
                     and spawn_elapsed >= ajustes.SPAWN_INTERVAL
                 ):
-                    objects.append(spawn_object())
+                    objects.append(spawn_object(level["bottle_variant"]))
                     spawn_elapsed -= ajustes.SPAWN_INTERVAL
 
                 for falling_object in objects:
@@ -444,35 +660,32 @@ def main():
                         falling_object.y - player.y,
                     )
                     touch_distance = falling_object.radius + hand_state.radius
-                    if falling_object.kind == "bottle":
-                        if hand_state.is_open:
-                            if distance < touch_distance:
-                                falling_object.hand_touched_open = True
-                            elif distance > (
-                                touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
-                            ):
-                                falling_object.hand_touched_open = False
-                        elif falling_object.hand_touched_open:
-                            if distance < (
-                                touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
-                            ):
-                                if falling_object.crush():
+                    if hand_state.is_open:
+                        if distance < touch_distance:
+                            falling_object.hand_touched_open = True
+                        elif distance > (
+                            touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
+                        ):
+                            falling_object.hand_touched_open = False
+                    elif falling_object.hand_touched_open:
+                        if distance < (
+                            touch_distance + ajustes.HAND_TOUCH_RELEASE_MARGIN
+                        ):
+                            if falling_object.crush():
+                                if falling_object.bottle_variant == level["bottle_variant"]:
                                     level_bottles += 1
                                     total_bottles += 1
                                     collect_sound.play()
-                            else:
-                                falling_object.hand_touched_open = False
-                    elif hand_state.is_open and distance < touch_distance:
-                        lives -= 1
-                        hit_sound.play()
-                        falling_object.y = (
-                            ajustes.WINDOW_HEIGHT + falling_object.radius
-                        )
+                                else:
+                                    lives -= 1
+                                    hit_sound.play()
+                        else:
+                            falling_object.hand_touched_open = False
 
                 objects = [
                     falling_object
                     for falling_object in objects
-                    if falling_object.y < ajustes.WINDOW_HEIGHT + falling_object.radius
+                    if falling_object.is_fully_visible
                 ]
 
                 level_complete = (
@@ -482,58 +695,67 @@ def main():
                 if level_complete:
                     if level_index == len(ajustes.LEVELS) - 1:
                         result_state = "won"
-                        game_state = "enter_name"
+                        game_state = (
+                            "enter_name"
+                            if qualifies_for_ranking(ranking, total_bottles)
+                            else "ranking_result"
+                        )
                     else:
                         level_index += 1
                         level_bottles = 0
                         objects = []
+                        remaining = ajustes.LEVELS[level_index]["time_limit"]
+                        spawn_elapsed = 0.0
                         level_banner_time = ajustes.LEVEL_BANNER_SECONDS
                 elif lives <= 0 or remaining <= 0:
                     result_state = "lost"
-                    game_state = "enter_name"
+                    game_state = (
+                        "enter_name"
+                        if qualifies_for_ranking(ranking, total_bottles)
+                        else "ranking_result"
+                    )
 
             for falling_object in objects:
                 falling_object.draw(
                     screen,
                     bottle_sprites,
-                    battery_sprite,
                     crushed_bottle_sprites,
                 )
             draw_hud(
                 screen,
-                font,
                 small_font,
                 level_index,
                 level_bottles,
                 lives,
                 remaining,
                 game_state,
+                bottle_hud_sprites,
             )
 
             if level_banner_time > 0 and game_state == "playing":
                 level = ajustes.LEVELS[level_index]
                 draw_text(
                     screen,
-                    f"NIVEL {level_index + 1}: {level['name']}",
+                    f"APLASTA SOLO: {level['name']}",
                     font,
                     level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 112),
+                    (ajustes.WINDOW_WIDTH // 2, 176),
                     centered=True,
                 )
                 draw_text(
                     screen,
-                    f"Junta {level['bottles_to_collect']} botellas para avanzar",
+                    f"Consigue {level['bottles_to_collect']} botellas objetivo",
                     small_font,
                     level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 151),
+                    (ajustes.WINDOW_WIDTH // 2, 220),
                     centered=True,
                 )
                 draw_text(
                     screen,
-                    "Toca la botella con la mano abierta y cierra la mano",
+                    "Toca con la mano abierta y ciérrala para aplastar",
                     small_font,
                     level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 190),
+                    (ajustes.WINDOW_WIDTH // 2, 258),
                     centered=True,
                 )
 
@@ -555,14 +777,24 @@ def main():
                     centered=True,
                 )
 
-            if game_state == "enter_name":
+            if ranking_open:
+                draw_ranking_overlay(
+                    screen,
+                    font,
+                    small_font,
+                    ranking,
+                    return_to_game=True,
+                )
+            elif game_state == "paused":
+                draw_pause_overlay(screen, font, small_font)
+            elif game_state == "enter_name":
                 overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
                 overlay.fill((5, 9, 24, 210))
                 screen.blit(overlay, (0, 0))
                 headline = (
                     "¡PLANETA LIMPIO!"
                     if result_state == "won"
-                    else "SE AGOTÓ LA ENERGÍA"
+                    else "SE ACABÓ EL TIEMPO O LAS VIDAS"
                 )
                 color = (
                     ajustes.BOTTLE_EDGE_COLOR[:3]
@@ -616,49 +848,18 @@ def main():
                         centered=True,
                     )
 
-            elif game_state == "ranking":
-                overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-                overlay.fill((5, 9, 24, 220))
-                screen.blit(overlay, (0, 0))
-                draw_text(
+            elif game_state in {"ranking", "ranking_result"}:
+                draw_ranking_overlay(
                     screen,
-                    "RANKING",
                     font,
-                    ajustes.BOTTLE_EDGE_COLOR[:3],
-                    (ajustes.WINDOW_WIDTH // 2, 88),
-                    centered=True,
-                )
-                for index, entry in enumerate(ranking):
-                    line = (
-                        f"{index + 1:>2}.  {entry['name']:<16}  "
-                        f"{entry['score']:>3} botellas"
-                    )
-                    draw_text(
-                        screen,
-                        line,
-                        small_font,
-                        ajustes.WHITE,
-                        (ajustes.WINDOW_WIDTH // 2, 142 + index * 34),
-                        centered=True,
-                    )
-                if not ranking:
-                    draw_text(
-                        screen,
-                        "Aun no hay puntajes guardados.",
-                        small_font,
-                        ajustes.WHITE,
-                        (ajustes.WINDOW_WIDTH // 2, 200),
-                        centered=True,
-                    )
-                draw_text(
-                    screen,
-                    "Presiona R para volver a jugar",
                     small_font,
-                    ajustes.WHITE,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 50),
-                    centered=True,
+                    ranking,
+                    personal_score=(
+                        total_bottles if game_state == "ranking_result" else None
+                    ),
                 )
 
+            pygame.transform.smoothscale(screen, display.get_size(), display)
             pygame.display.flip()
     finally:
         vision.release()
