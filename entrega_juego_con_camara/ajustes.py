@@ -74,12 +74,11 @@ LEVELS = (
         "time_limit": 63,
     },
 )
-BOTTLE_BODY_COLOR = (103, 255, 211, 105)
-BOTTLE_EDGE_COLOR = (72, 231, 183, 245)
+BOTTLE_BODY_COLOR = (103, 255, 211, 255)
+BOTTLE_EDGE_COLOR = (38, 177, 135, 255)
 BOTTLE_CAP_COLOR = (0, 130, 74, 255)
 BOTTLE_CAP_EDGE_COLOR = (0, 88, 52, 255)
-BOTTLE_HIGHLIGHT_COLOR = (222, 255, 247, 225)
-BOTTLE_LABEL_COLOR = (9, 112, 90, 235)
+BOTTLE_HIGHLIGHT_COLOR = (245, 255, 249, 255)
 BOTTLE_VARIANTS = {
     "verde": (
         BOTTLE_BODY_COLOR,
@@ -87,12 +86,42 @@ BOTTLE_VARIANTS = {
         BOTTLE_CAP_COLOR,
         BOTTLE_CAP_EDGE_COLOR,
     ),
-    "beige": ((238, 233, 216, 125), (190, 181, 155, 235), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
-    "amarillo": ((255, 225, 65, 110), (228, 177, 30, 235), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
-    "naranja": ((255, 112, 16, 155), (224, 76, 8, 245), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
-    "marron_claro": ((190, 135, 88, 115), (145, 91, 54, 235), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
-    "rosado": ((255, 120, 180, 110), (218, 65, 128, 235), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
-    "rojo": ((242, 65, 68, 110), (182, 35, 45, 240), BOTTLE_CAP_COLOR, BOTTLE_CAP_EDGE_COLOR),
+    "beige": (
+        (238, 233, 216, 255),
+        (170, 151, 108, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
+    "amarillo": (
+        (255, 225, 65, 255),
+        (205, 151, 15, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
+    "naranja": (
+        (255, 112, 16, 255),
+        (201, 66, 8, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
+    "marron_claro": (
+        (190, 135, 88, 255),
+        (126, 78, 43, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
+    "rosado": (
+        (255, 120, 180, 255),
+        (195, 47, 114, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
+    "rojo": (
+        (242, 65, 68, 255),
+        (178, 29, 39, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
+    ),
     "verde_tapa_azul": (
         BOTTLE_BODY_COLOR,
         BOTTLE_EDGE_COLOR,

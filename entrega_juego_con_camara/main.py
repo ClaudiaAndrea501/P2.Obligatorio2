@@ -146,14 +146,27 @@ def create_bottle_sprite(body_color, edge_color, cap_color, cap_edge_color):
             point(x, 8),
             max(1, scale // 2),
         )
-    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(10, 25), point(10, 43), scale)
-    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(12, 21), point(14, 18), max(1, scale // 2))
-    pygame.draw.line(sprite, ajustes.BOTTLE_HIGHLIGHT_COLOR, point(9, 45), point(13, 47), max(1, scale // 2))
-    pygame.draw.rect(sprite, (195, 255, 240, 100), (*point(12, 30), 12 * scale, 8 * scale))
-
-    label_font = pygame.font.Font(None, 11 * scale)
-    label = label_font.render("ECO", True, ajustes.BOTTLE_LABEL_COLOR)
-    sprite.blit(label, label.get_rect(center=point(18, 34)))
+    pygame.draw.line(
+        sprite,
+        ajustes.BOTTLE_HIGHLIGHT_COLOR,
+        point(10, 25),
+        point(10, 43),
+        scale,
+    )
+    pygame.draw.line(
+        sprite,
+        ajustes.BOTTLE_HIGHLIGHT_COLOR,
+        point(12, 21),
+        point(14, 18),
+        max(1, scale // 2),
+    )
+    pygame.draw.line(
+        sprite,
+        ajustes.BOTTLE_HIGHLIGHT_COLOR,
+        point(9, 45),
+        point(13, 47),
+        max(1, scale // 2),
+    )
     return pygame.transform.smoothscale(sprite, ajustes.BOTTLE_SPRITE_SIZE).convert_alpha()
 
 
