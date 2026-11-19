@@ -17,11 +17,11 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-La camara debe estar conectada y tener permiso de uso. Si el sistema usa otra cámara, cambia `CAMERA_INDEX` en `ajustes.py`. El juego solicita video a 1280 x 720 para mejorar la nitidez; la resolución efectiva depende de lo que admita la webcam. La imagen se muestra directamente a resolución de pantalla y sin filtros de suavizado.
+La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra cámara, cambia `CAMERA_INDEX` en `ajustes.py`. El juego solicita video a 1280 x 720 para mejorar la nitidez; la resolución efectiva depende de lo que admita la webcam. La imagen se muestra directamente a resolución de pantalla y sin filtros de suavizado.
 
-## Como jugar
+## Cómo jugar
 
-1. La imagen espejada de la cámara y el juego se ajustan a toda la pantalla, sin franjas negras laterales. La franja superior tiene un degradado cálido y tarjetas de información para facilitar la lectura.
+1. Al iniciar, aparece una pantalla con las opciones JUGAR, CÓMO JUGAR, RANKING y SALIR. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
 2. Abre la mano para mover el punto de contacto y ciérrala para aplastar la botella que tocaste.
 3. Cada nivel indica la botella objetivo con una imagen y su nombre. Aplastar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
    Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia.
@@ -45,7 +45,7 @@ El ranking se guarda en `ranking.json` dentro de esta carpeta y persiste entre p
 
 La música no es necesaria: el juego incluye efectos de sonido para aplastar botellas correctas y equivocadas.
 
-## Controles y camara
+## Controles y cámara
 
 `vision.py` usa MediaPipe para detectar la mano y reconocer si los dedos están extendidos o cerrados, sin depender del color. La palma mueve el punto de contacto; hay que tocar la botella con la mano abierta y cerrar la mano para aplastarla. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla.
 

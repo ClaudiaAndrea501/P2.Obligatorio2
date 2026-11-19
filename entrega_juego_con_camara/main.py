@@ -11,6 +11,15 @@ from vision import Vision
 
 RANKING_BUTTON_RECT = (914, 7, 38, 38)
 PAUSE_BUTTON_RECT = (870, 7, 38, 38)
+MENU_BUTTON_RECTS = {
+    "JUGAR": (72, 258, 232, 60),
+    "CÓMO JUGAR": (72, 332, 232, 60),
+    "RANKING": (72, 406, 232, 60),
+    "SALIR": (72, 480, 232, 60),
+}
+INSTRUCTIONS_PANEL_RECT = (160, 110, 640, 420)
+INSTRUCTIONS_CLOSE_RECT = (742, 126, 38, 38)
+RANKING_PANEL_RECT = (128, 126, 704, 470)
 
 
 class Player:
@@ -173,6 +182,248 @@ def draw_text(
     return rect
 
 
+def draw_wrapped_text(
+    surface,
+    text,
+    font,
+    color,
+    rect,
+    line_spacing=3,
+    centered=False,
+):
+    words = text.split()
+    lines = []
+    current_line = ""
+    for word in words:
+        candidate = f"{current_line} {word}".strip()
+        if current_line and font.size(candidate)[0] > rect.width:
+            lines.append(current_line)
+            current_line = word
+        else:
+            current_line = candidate
+    if current_line:
+        lines.append(current_line)
+
+    y = rect.top
+    for line in lines:
+        image = font.render(line, True, color)
+        line_rect = image.get_rect()
+        if centered:
+            line_rect.midtop = (rect.centerx, y)
+        else:
+            line_rect.topleft = (rect.left, y)
+        surface.blit(image, line_rect)
+        y += font.get_linesize() + line_spacing
+    return y
+
+
+def draw_menu_button(surface, rect, label, font, color):
+    pygame.draw.rect(surface, (28, 19, 38, 235), rect.move(0, 5), border_radius=17)
+    pygame.draw.rect(surface, color, rect, border_radius=17)
+    pygame.draw.rect(
+        surface,
+        (226, 205, 244),
+        rect,
+        width=2,
+        border_radius=17,
+    )
+    if label == "JUGAR":
+        pygame.draw.polygon(
+            surface,
+            (255, 255, 255),
+            [
+                (rect.left + 23, rect.centery - 11),
+                (rect.left + 23, rect.centery + 11),
+                (rect.left + 42, rect.centery),
+            ],
+        )
+        draw_text(
+            surface,
+            label,
+            font,
+            (255, 255, 255),
+            (rect.centerx + 14, rect.centery),
+            centered=True,
+        )
+    else:
+        draw_text(
+            surface,
+            label,
+            font,
+            (255, 255, 255),
+            rect.center,
+            centered=True,
+        )
+
+
+def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font):
+    pygame.draw.rect(surface, (24, 21, 29, 190), surface.get_rect())
+    panel = pygame.Rect(40, 28, 880, 584)
+    pygame.draw.rect(surface, (19, 16, 25, 235), panel.move(0, 7), border_radius=28)
+    pygame.draw.rect(surface, (79, 48, 101, 238), panel, border_radius=28)
+    pygame.draw.rect(
+        surface,
+        (222, 195, 239),
+        panel,
+        width=3,
+        border_radius=28,
+    )
+
+    draw_text(
+        surface,
+        "MISIÓN RECICLAJE",
+        title_font,
+        (255, 255, 255),
+        (panel.centerx, 58),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "Botellas",
+        subtitle_font,
+        (238, 213, 255),
+        (panel.centerx, 105),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "¡La misión de reciclaje comienza ahora!",
+        body_font,
+        (255, 255, 255),
+        (panel.centerx, 146),
+        centered=True,
+    )
+    draw_wrapped_text(
+        surface,
+        "Usá tu mano frente a la cámara para aplastar las botellas correctas antes de descartarlas en la papelera.",
+        body_font,
+        (245, 239, 250),
+        pygame.Rect(92, 178, 776, 44),
+        centered=True,
+    )
+
+    instructions = pygame.Rect(338, 228, 548, 340)
+    pygame.draw.rect(surface, (50, 33, 65, 245), instructions, border_radius=22)
+    pygame.draw.rect(
+        surface,
+        (192, 150, 218),
+        instructions,
+        width=2,
+        border_radius=22,
+    )
+    header = pygame.Rect(instructions.left, instructions.top, instructions.width, 56)
+    pygame.draw.rect(
+        surface,
+        (128, 78, 159),
+        header,
+        border_top_left_radius=20,
+        border_top_right_radius=20,
+    )
+    draw_text(
+        surface,
+        "CÓMO JUGAR",
+        subtitle_font,
+        (255, 255, 255),
+        (header.centerx, header.centery),
+        centered=True,
+    )
+
+    copy = (
+        "Antes de comenzar: colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
+        "Abrí la mano para mover el punto de contacto.",
+        "Cerrá la mano para aplastar las botellas indicadas en cada nivel.",
+        "Tenés 3 vidas para completar la misión y 8 niveles que completar.",
+    )
+    y = instructions.top + 76
+    for paragraph in copy:
+        y = draw_wrapped_text(
+            surface,
+            paragraph,
+            body_font,
+            (255, 255, 255),
+            pygame.Rect(instructions.left + 25, y, instructions.width - 50, 80),
+            line_spacing=1,
+        ) + 5
+
+    button_colors = {
+        "JUGAR": (16, 166, 207),
+        "CÓMO JUGAR": (133, 78, 167),
+        "RANKING": (19, 174, 145),
+        "SALIR": (118, 79, 151),
+    }
+    for label, button_rect in MENU_BUTTON_RECTS.items():
+        draw_menu_button(
+            surface,
+            pygame.Rect(button_rect),
+            label,
+            button_font,
+            button_colors[label],
+        )
+
+
+def draw_instructions_overlay(surface, title_font, body_font):
+    panel = pygame.Rect(INSTRUCTIONS_PANEL_RECT)
+    pygame.draw.rect(surface, (18, 14, 25, 245), panel.move(0, 7), border_radius=24)
+    pygame.draw.rect(surface, (100, 62, 126), panel, border_radius=24)
+    pygame.draw.rect(surface, (226, 203, 242), panel, width=3, border_radius=24)
+    header = pygame.Rect(panel.left, panel.top, panel.width, 70)
+    pygame.draw.rect(
+        surface,
+        (132, 79, 165),
+        header,
+        border_top_left_radius=22,
+        border_top_right_radius=22,
+    )
+    draw_text(
+        surface,
+        "CÓMO JUGAR",
+        title_font,
+        (255, 255, 255),
+        (panel.centerx, header.centery),
+        centered=True,
+    )
+
+    pygame.draw.rect(
+        surface,
+        (18, 151, 190),
+        pygame.Rect(INSTRUCTIONS_CLOSE_RECT),
+        border_radius=12,
+    )
+    draw_text(
+        surface,
+        "X",
+        body_font,
+        (255, 255, 255),
+        pygame.Rect(INSTRUCTIONS_CLOSE_RECT).center,
+        centered=True,
+    )
+
+    copy = (
+        "Antes de comenzar: colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
+        "Abrí la mano para mover el punto de contacto.",
+        "Cerrá la mano para aplastar las botellas indicadas en cada nivel.",
+        "Tenés 3 vidas para completar la misión y 8 niveles que completar.",
+    )
+    y = panel.top + 96
+    for paragraph in copy:
+        y = draw_wrapped_text(
+            surface,
+            paragraph,
+            body_font,
+            (255, 255, 255),
+            pygame.Rect(panel.left + 34, y, panel.width - 68, 80),
+            line_spacing=2,
+        ) + 12
+    draw_text(
+        surface,
+        "Presioná Esc para volver",
+        body_font,
+        (238, 213, 255),
+        (panel.centerx, panel.bottom - 24),
+        centered=True,
+    )
+
+
 def spawn_object(target_variant):
     variants = tuple(ajustes.BOTTLE_VARIANTS)
     if random.random() < ajustes.BOTTLE_TARGET_CHANCE:
@@ -247,8 +498,8 @@ def qualifies_for_ranking(ranking, score):
 def create_hud_background():
     width, height = ajustes.WINDOW_WIDTH, 112
     background = pygame.Surface((width, height))
-    start_color = (255, 211, 76)
-    end_color = (255, 151, 77)
+    start_color = (129, 79, 159)
+    end_color = (78, 47, 105)
     for x in range(width):
         ratio = x / max(1, width - 1)
         color = tuple(
@@ -282,10 +533,16 @@ def draw_hud(
     hud_background,
 ):
     level = ajustes.LEVELS[level_index]
-    hud_color = (0, 82, 54)
-    warning_color = (131, 49, 37)
+    hud_color = (255, 255, 255)
+    warning_color = (255, 205, 132)
     surface.blit(hud_background, (0, 0))
-    pygame.draw.line(surface, (255, 244, 194), (0, 109), (ajustes.WINDOW_WIDTH, 109), 3)
+    pygame.draw.line(
+        surface,
+        (222, 195, 239),
+        (0, 109),
+        (ajustes.WINDOW_WIDTH, 109),
+        2,
+    )
     info_cards = (
         pygame.Rect(18, 8, 270, 34),
         pygame.Rect(300, 8, 270, 34),
@@ -295,10 +552,22 @@ def draw_hud(
         game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS
     )
     for card in info_cards:
+        card_color = (
+            (112, 62, 86)
+            if warning_active and card == info_cards[2]
+            else (71, 47, 88)
+        )
         pygame.draw.rect(
             surface,
-            (255, 236, 215) if warning_active and card == info_cards[2] else (255, 250, 224),
+            card_color,
             card,
+            border_radius=12,
+        )
+        pygame.draw.rect(
+            surface,
+            (205, 177, 225),
+            card,
+            width=2,
             border_radius=12,
         )
     draw_text(
@@ -328,7 +597,14 @@ def draw_hud(
     target_card = pygame.Rect(18, 50, 620, 52)
     lives_card = pygame.Rect(654, 50, 288, 52)
     for card in (target_card, lives_card):
-        pygame.draw.rect(surface, (255, 250, 224), card, border_radius=15)
+        pygame.draw.rect(surface, (71, 47, 88), card, border_radius=15)
+        pygame.draw.rect(
+            surface,
+            (205, 177, 225),
+            card,
+            width=2,
+            border_radius=15,
+        )
     target_sprite = bottle_hud_sprites[level["bottle_variant"]]
     target_label_width = small_font.size("APLASTA:")[0]
     target_name_width = small_font.size(level["name"])[0]
@@ -380,7 +656,14 @@ def draw_hud(
         heart_x = lives_left + lives_label_width + 16 + 10 + index * 36
         draw_life_heart(surface, (heart_x, lives_card.centery), (224, 74, 73))
     ranking_button = pygame.Rect(RANKING_BUTTON_RECT)
-    pygame.draw.rect(surface, (0, 102, 69), ranking_button, border_radius=12)
+    pygame.draw.rect(surface, (19, 174, 145), ranking_button, border_radius=12)
+    pygame.draw.rect(
+        surface,
+        (226, 205, 244),
+        ranking_button,
+        width=2,
+        border_radius=12,
+    )
     trophy_color = (255, 218, 91)
     pygame.draw.polygon(
         surface,
@@ -421,7 +704,14 @@ def draw_hud(
     )
 
     pause_button = pygame.Rect(PAUSE_BUTTON_RECT)
-    pygame.draw.rect(surface, (0, 102, 69), pause_button, border_radius=12)
+    pygame.draw.rect(surface, (16, 166, 207), pause_button, border_radius=12)
+    pygame.draw.rect(
+        surface,
+        (226, 205, 244),
+        pause_button,
+        width=2,
+        border_radius=12,
+    )
     if game_state == "paused":
         pygame.draw.polygon(
             surface,
@@ -454,22 +744,23 @@ def draw_ranking_overlay(
     ranking,
     personal_score=None,
     return_to_game=False,
+    return_to_menu=False,
 ):
     panel = pygame.Rect(128, 126, 704, 470)
-    pygame.draw.rect(surface, (16, 42, 30), panel.move(0, 7), border_radius=24)
-    pygame.draw.rect(surface, (255, 250, 232), panel, border_radius=24)
-    pygame.draw.rect(surface, (0, 116, 72), panel, width=3, border_radius=24)
+    pygame.draw.rect(surface, (19, 16, 25), panel.move(0, 7), border_radius=24)
+    pygame.draw.rect(surface, (79, 48, 101), panel, border_radius=24)
+    pygame.draw.rect(surface, (222, 195, 239), panel, width=3, border_radius=24)
     header = pygame.Rect(panel.left, panel.top, panel.width, 92)
     pygame.draw.rect(
         surface,
-        (239, 133, 57),
+        (128, 78, 159),
         header,
         border_top_left_radius=22,
         border_top_right_radius=22,
     )
     pygame.draw.rect(
         surface,
-        (255, 207, 72),
+        (18, 166, 207),
         (panel.left, header.bottom - 8, panel.width, 8),
     )
     draw_text(
@@ -484,7 +775,7 @@ def draw_ranking_overlay(
         surface,
         "LOS 5 MEJORES",
         small_font,
-        (255, 247, 215),
+        (238, 213, 255),
         (panel.centerx, panel.top + 68),
         centered=True,
     )
@@ -495,9 +786,10 @@ def draw_ranking_overlay(
             panel.width - 56,
             42,
         )
-        row_color = (255, 255, 255) if index % 2 == 0 else (238, 247, 235)
+        row_color = (97, 67, 117) if index % 2 == 0 else (83, 56, 103)
         pygame.draw.rect(surface, row_color, row, border_radius=12)
-        rank_color = (238, 165, 48) if index == 0 else (59, 145, 105)
+        pygame.draw.rect(surface, (176, 143, 201), row, width=1, border_radius=12)
+        rank_color = (18, 166, 207) if index == 0 else (19, 174, 145)
         pygame.draw.circle(surface, rank_color, (row.left + 23, row.centery), 15)
         draw_text(
             surface,
@@ -507,12 +799,12 @@ def draw_ranking_overlay(
             (row.left + 23, row.centery),
             centered=True,
         )
-        name_image = small_font.render(entry["name"], True, (0, 76, 52))
+        name_image = small_font.render(entry["name"], True, (255, 255, 255))
         surface.blit(name_image, name_image.get_rect(midleft=(row.left + 52, row.centery)))
         score_image = small_font.render(
             f"{entry['score']} botellas",
             True,
-            (0, 76, 52),
+            (238, 213, 255),
         )
         surface.blit(
             score_image,
@@ -523,7 +815,7 @@ def draw_ranking_overlay(
             surface,
             "Aun no hay puntajes guardados.",
             small_font,
-            (0, 76, 52),
+            (238, 213, 255),
             (panel.centerx, panel.top + 190),
             centered=True,
         )
@@ -534,25 +826,26 @@ def draw_ranking_overlay(
             panel.width - 56,
             42,
         )
-        pygame.draw.rect(surface, (255, 225, 133), score_box, border_radius=13)
+        pygame.draw.rect(surface, (19, 174, 145), score_box, border_radius=13)
         draw_text(
             surface,
             f"Tu puntaje: {personal_score} botellas",
             small_font,
-            (0, 76, 52),
+            (255, 255, 255),
             score_box.center,
             centered=True,
         )
-    prompt = (
-        "Haz clic en la copa para volver"
-        if return_to_game
-        else "Presiona R para volver a jugar"
-    )
+    if return_to_menu:
+        prompt = "Presiona Esc para volver al inicio"
+    elif return_to_game:
+        prompt = "Haz clic en la copa para volver"
+    else:
+        prompt = "Presiona R para volver a jugar"
     draw_text(
         surface,
         prompt,
         small_font,
-        (0, 76, 52),
+        (238, 213, 255),
         (panel.centerx, panel.bottom - 24),
         centered=True,
     )
@@ -560,13 +853,13 @@ def draw_ranking_overlay(
 
 def draw_pause_overlay(surface, font, small_font):
     panel = pygame.Rect(160, 222, 640, 210)
-    pygame.draw.rect(surface, (16, 42, 30), panel.move(0, 7), border_radius=24)
-    pygame.draw.rect(surface, (255, 250, 232), panel, border_radius=24)
-    pygame.draw.rect(surface, (0, 116, 72), panel, width=3, border_radius=24)
+    pygame.draw.rect(surface, (19, 16, 25), panel.move(0, 7), border_radius=24)
+    pygame.draw.rect(surface, (79, 48, 101), panel, border_radius=24)
+    pygame.draw.rect(surface, (222, 195, 239), panel, width=3, border_radius=24)
     header = pygame.Rect(panel.left, panel.top, panel.width, 76)
     pygame.draw.rect(
         surface,
-        (239, 133, 57),
+        (128, 78, 159),
         header,
         border_top_left_radius=22,
         border_top_right_radius=22,
@@ -583,8 +876,181 @@ def draw_pause_overlay(surface, font, small_font):
         surface,
         "Pulsa el botón de pausa para continuar",
         small_font,
-        (0, 76, 52),
+        (238, 213, 255),
         (panel.centerx, panel.top + 138),
+        centered=True,
+    )
+
+
+def draw_level_intro(
+    surface,
+    level_index,
+    lives,
+    seconds_until_start,
+    bottle_intro_sprites,
+    title_font,
+    subtitle_font,
+    body_font,
+):
+    level = ajustes.LEVELS[level_index]
+    pygame.draw.rect(surface, (24, 21, 29, 190), surface.get_rect())
+    panel = pygame.Rect(70, 48, 820, 544)
+    pygame.draw.rect(surface, (19, 16, 25, 235), panel.move(0, 7), border_radius=28)
+    pygame.draw.rect(surface, (79, 48, 101, 238), panel, border_radius=28)
+    pygame.draw.rect(
+        surface,
+        (222, 195, 239),
+        panel,
+        width=3,
+        border_radius=28,
+    )
+    header = pygame.Rect(panel.left, panel.top, panel.width, 78)
+    pygame.draw.rect(
+        surface,
+        (128, 78, 159),
+        header,
+        border_top_left_radius=26,
+        border_top_right_radius=26,
+    )
+    draw_text(
+        surface,
+        f"NIVEL {level_index + 1} / {len(ajustes.LEVELS)}",
+        title_font,
+        (255, 255, 255),
+        header.center,
+        centered=True,
+    )
+
+    bottle_card = pygame.Rect(110, 158, 264, 354)
+    pygame.draw.rect(surface, (50, 33, 65), bottle_card, border_radius=22)
+    pygame.draw.rect(
+        surface,
+        (192, 150, 218),
+        bottle_card,
+        width=2,
+        border_radius=22,
+    )
+    draw_text(
+        surface,
+        "BOTELLA OBJETIVO",
+        subtitle_font,
+        (238, 213, 255),
+        (bottle_card.centerx, bottle_card.top + 34),
+        centered=True,
+    )
+    pygame.draw.circle(
+        surface,
+        (91, 63, 110),
+        (bottle_card.centerx, bottle_card.centery + 2),
+        105,
+    )
+    target_sprite = bottle_intro_sprites[level["bottle_variant"]]
+    surface.blit(target_sprite, target_sprite.get_rect(center=bottle_card.center))
+    draw_text(
+        surface,
+        level["name"],
+        body_font,
+        (255, 255, 255),
+        (bottle_card.centerx, bottle_card.bottom - 26),
+        centered=True,
+    )
+
+    details = pygame.Rect(398, 158, 452, 354)
+    pygame.draw.rect(surface, (50, 33, 65), details, border_radius=22)
+    pygame.draw.rect(
+        surface,
+        (192, 150, 218),
+        details,
+        width=2,
+        border_radius=22,
+    )
+    draw_text(
+        surface,
+        "APLASTA SOLO",
+        subtitle_font,
+        (100, 221, 255),
+        (details.centerx, details.top + 37),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        level["name"],
+        subtitle_font,
+        (255, 255, 255),
+        (details.centerx, details.top + 81),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        f"OBJETIVO: {level['bottles_to_collect']} botellas",
+        body_font,
+        (255, 255, 255),
+        (details.centerx, details.top + 132),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        f"TIEMPO: {level['time_limit']} segundos",
+        body_font,
+        (255, 255, 255),
+        (details.centerx, details.top + 166),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        f"VIDAS RESTANTES: {lives}/{ajustes.STARTING_LIVES}",
+        body_font,
+        (255, 255, 255),
+        (details.centerx, details.top + 200),
+        centered=True,
+    )
+    pygame.draw.line(
+        surface,
+        (192, 150, 218),
+        (details.left + 24, details.top + 230),
+        (details.right - 24, details.top + 230),
+        2,
+    )
+    draw_text(
+        surface,
+        "Abrí la mano para mover el punto de contacto",
+        body_font,
+        (238, 213, 255),
+        (details.centerx, details.top + 258),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "Cerrá la mano para aplastar la botella objetivo",
+        body_font,
+        (238, 213, 255),
+        (details.centerx, details.top + 292),
+        centered=True,
+    )
+    draw_text(
+        surface,
+        "Las botellas de otro color quitan una vida",
+        body_font,
+        (238, 213, 255),
+        (details.centerx, details.top + 326),
+        centered=True,
+    )
+
+    countdown = pygame.Rect(398, 526, 452, 42)
+    pygame.draw.rect(surface, (16, 166, 207), countdown, border_radius=15)
+    pygame.draw.rect(
+        surface,
+        (226, 205, 244),
+        countdown,
+        width=2,
+        border_radius=15,
+    )
+    draw_text(
+        surface,
+        f"COMIENZA EN {max(1, math.ceil(seconds_until_start))}",
+        body_font,
+        (255, 255, 255),
+        countdown.center,
         centered=True,
     )
 
@@ -612,6 +1078,10 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, ajustes.FONT_SIZE)
     small_font = pygame.font.Font(None, ajustes.SMALL_FONT_SIZE)
+    menu_title_font = pygame.font.Font(None, 48)
+    menu_subtitle_font = pygame.font.Font(None, 32)
+    menu_body_font = pygame.font.Font(None, 22)
+    menu_button_font = pygame.font.Font(None, 27)
     hud_background = create_hud_background()
     collect_sound = pygame.mixer.Sound(str(ajustes.SOUND_COLLECT_PATH))
     hit_sound = pygame.mixer.Sound(str(ajustes.SOUND_HIT_PATH))
@@ -623,6 +1093,10 @@ def main():
     }
     bottle_hud_sprites = {
         variant: pygame.transform.smoothscale(sprite, (25, 36))
+        for variant, sprite in bottle_sprites.items()
+    }
+    bottle_intro_sprites = {
+        variant: pygame.transform.smoothscale(sprite, (150, 220))
         for variant, sprite in bottle_sprites.items()
     }
     crushed_bottle_sprites = {
@@ -640,30 +1114,37 @@ def main():
         )
 
     player, objects, level_bottles, total_bottles, lives, remaining, spawn_elapsed, game_state = reset_game()
+    game_state = "menu"
     level_index = 0
     level_banner_time = ajustes.LEVEL_BANNER_SECONDS
     player_name = ""
     name_entry_error = ""
     result_state = ""
     ranking_open = False
+    menu_overlay = ""
     running = True
     try:
         while running:
             delta_time = min(clock.tick(ajustes.FPS) / 1000, ajustes.MAX_DELTA_TIME)
-            if game_state == "playing" and not ranking_open:
+            if (
+                game_state == "playing"
+                and not ranking_open
+                and level_banner_time > 0
+            ):
                 level_banner_time = max(0, level_banner_time - delta_time)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    if ranking_open:
+                    if game_state == "menu" and menu_overlay:
+                        menu_overlay = ""
+                    elif ranking_open:
                         ranking_open = False
                     else:
                         running = False
                 elif (
                     event.type == pygame.MOUSEBUTTONDOWN
                     and event.button == 1
-                    and game_state in {"playing", "paused"}
                 ):
                     mouse_x = round(
                         event.pos[0] * ajustes.WINDOW_WIDTH / display.get_width()
@@ -672,16 +1153,61 @@ def main():
                         event.pos[1] * ajustes.WINDOW_HEIGHT / display.get_height()
                     )
                     mouse_position = (mouse_x, mouse_y)
-                    if pygame.Rect(RANKING_BUTTON_RECT).collidepoint(mouse_position):
-                        ranking_open = not ranking_open
-                    elif ranking_open:
-                        ranking_open = False
-                    elif pygame.Rect(PAUSE_BUTTON_RECT).collidepoint(mouse_position):
-                        game_state = (
-                            "playing" if game_state == "paused" else "paused"
-                        )
-                        for falling_object in objects:
-                            falling_object.hand_touched_open = False
+                    if game_state == "menu":
+                        if menu_overlay == "instructions":
+                            if pygame.Rect(INSTRUCTIONS_CLOSE_RECT).collidepoint(
+                                mouse_position
+                            ):
+                                menu_overlay = ""
+                        elif menu_overlay == "ranking":
+                            if not pygame.Rect(RANKING_PANEL_RECT).collidepoint(
+                                mouse_position
+                            ):
+                                menu_overlay = ""
+                        else:
+                            for label, button_rect in MENU_BUTTON_RECTS.items():
+                                if not pygame.Rect(button_rect).collidepoint(
+                                    mouse_position
+                                ):
+                                    continue
+                                if label == "JUGAR":
+                                    (
+                                        player,
+                                        objects,
+                                        level_bottles,
+                                        total_bottles,
+                                        lives,
+                                        remaining,
+                                        spawn_elapsed,
+                                        game_state,
+                                    ) = reset_game()
+                                    level_index = 0
+                                    level_banner_time = ajustes.LEVEL_BANNER_SECONDS
+                                    player_name = ""
+                                    name_entry_error = ""
+                                    result_state = ""
+                                    ranking_open = False
+                                    menu_overlay = ""
+                                elif label == "CÓMO JUGAR":
+                                    menu_overlay = "instructions"
+                                elif label == "RANKING":
+                                    menu_overlay = "ranking"
+                                elif label == "SALIR":
+                                    running = False
+                                break
+                    elif game_state in {"playing", "paused"} and (
+                        game_state == "paused" or level_banner_time <= 0
+                    ):
+                        if pygame.Rect(RANKING_BUTTON_RECT).collidepoint(mouse_position):
+                            ranking_open = not ranking_open
+                        elif ranking_open:
+                            ranking_open = False
+                        elif pygame.Rect(PAUSE_BUTTON_RECT).collidepoint(mouse_position):
+                            game_state = (
+                                "playing" if game_state == "paused" else "paused"
+                            )
+                            for falling_object in objects:
+                                falling_object.hand_touched_open = False
                 elif (
                     event.type == pygame.KEYDOWN
                     and event.key == pygame.K_p
@@ -731,7 +1257,11 @@ def main():
             camera_position = hand_state.position if hand_state is not None else None
             screen.fill((0, 0, 0, 0))
 
-            if game_state == "playing" and not ranking_open:
+            if (
+                game_state == "playing"
+                and not ranking_open
+                and level_banner_time <= 0
+            ):
                 remaining -= delta_time
                 player.follow(camera_position)
                 if hand_state is not None:
@@ -814,52 +1344,32 @@ def main():
                         else "ranking_result"
                     )
 
-            for falling_object in objects:
-                falling_object.draw(
+            if game_state != "menu" and (
+                level_banner_time <= 0 or game_state == "paused"
+            ):
+                for falling_object in objects:
+                    falling_object.draw(
+                        screen,
+                        bottle_sprites,
+                        crushed_bottle_sprites,
+                    )
+                draw_hud(
                     screen,
-                    bottle_sprites,
-                    crushed_bottle_sprites,
-                )
-            draw_hud(
-                screen,
-                small_font,
-                level_index,
-                level_bottles,
-                lives,
-                remaining,
-                game_state,
-                bottle_hud_sprites,
-                hud_background,
-            )
-
-            if level_banner_time > 0 and game_state == "playing":
-                level = ajustes.LEVELS[level_index]
-                draw_text(
-                    screen,
-                    f"APLASTA SOLO: {level['name']}",
-                    font,
-                    level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 176),
-                    centered=True,
-                )
-                draw_text(
-                    screen,
-                    f"Consigue {level['bottles_to_collect']} botellas objetivo",
                     small_font,
-                    level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 220),
-                    centered=True,
-                )
-                draw_text(
-                    screen,
-                    "Toca con la mano abierta y ciérrala para aplastar",
-                    small_font,
-                    level["text_color"],
-                    (ajustes.WINDOW_WIDTH // 2, 258),
-                    centered=True,
+                    level_index,
+                    level_bottles,
+                    lives,
+                    remaining,
+                    game_state,
+                    bottle_hud_sprites,
+                    hud_background,
                 )
 
-            if camera_position is None and game_state == "playing":
+            if (
+                camera_position is None
+                and game_state == "playing"
+                and level_banner_time <= 0
+            ):
                 draw_text(
                     screen,
                     "No detecto la mano",
@@ -877,13 +1387,46 @@ def main():
                     centered=True,
                 )
 
-            if ranking_open:
+            if game_state == "menu":
+                draw_start_screen(
+                    screen,
+                    menu_title_font,
+                    menu_subtitle_font,
+                    menu_body_font,
+                    menu_button_font,
+                )
+                if menu_overlay == "instructions":
+                    draw_instructions_overlay(
+                        screen,
+                        menu_title_font,
+                        menu_body_font,
+                    )
+                elif menu_overlay == "ranking":
+                    draw_ranking_overlay(
+                        screen,
+                        font,
+                        small_font,
+                        ranking,
+                        return_to_menu=True,
+                    )
+            elif ranking_open:
                 draw_ranking_overlay(
                     screen,
                     font,
                     small_font,
                     ranking,
                     return_to_game=True,
+                )
+            elif game_state == "playing" and level_banner_time > 0:
+                draw_level_intro(
+                    screen,
+                    level_index,
+                    lives,
+                    level_banner_time,
+                    bottle_intro_sprites,
+                    menu_title_font,
+                    menu_subtitle_font,
+                    menu_body_font,
                 )
             elif game_state == "paused":
                 draw_pause_overlay(screen, font, small_font)
