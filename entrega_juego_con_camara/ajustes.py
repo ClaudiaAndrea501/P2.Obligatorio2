@@ -25,9 +25,9 @@ LEVELS = (
         "time_limit": 32,
     },
     {
-        "name": "Agua con gas",
-        "bottle_variant": "verde_tapa_azul",
-        "text_color": (24, 73, 113),
+        "name": "Sabor uva",
+        "bottle_variant": "uva",
+        "text_color": (92, 48, 122),
         "bottles_to_collect": 6,
         "time_limit": 32,
     },
@@ -122,11 +122,11 @@ BOTTLE_VARIANTS = {
         BOTTLE_CAP_COLOR,
         BOTTLE_CAP_EDGE_COLOR,
     ),
-    "verde_tapa_azul": (
-        BOTTLE_BODY_COLOR,
-        BOTTLE_EDGE_COLOR,
-        (35, 115, 220, 255),
-        (16, 67, 148, 255),
+    "uva": (
+        (170, 95, 220, 255),
+        (112, 52, 158, 255),
+        BOTTLE_CAP_COLOR,
+        BOTTLE_CAP_EDGE_COLOR,
     ),
 }
 WARNING_COLOR = (255, 146, 104)
@@ -136,10 +136,11 @@ PLAYER_RADIUS = 21
 PLAYER_SMOOTHING = 0.55
 OBJECT_SPEED_RANGE = (115, 225)
 BOTTLE_SWAY = 48
+BOTTLE_SIDE_MARGIN = 200
 BOTTLE_PHASE_SPEED = 2.5
 BOTTLE_TARGET_CHANCE = 0.5
-BOTTLE_SPRITE_SIZE = (36, 52)
-BOTTLE_COLLISION_RADIUS = 18
+BOTTLE_SPRITE_SIZE = (54, 78)
+BOTTLE_COLLISION_RADIUS = 27
 SPAWN_INTERVAL = 0.72
 STARTING_LIVES = 3
 TIME_WARNING_SECONDS = 12
@@ -148,7 +149,6 @@ CAMERA_INDEX = 0
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
 HAND_MODEL_PATH = ASSETS_DIR / "models" / "hand_landmarker.task"
-HAND_TOUCH_RELEASE_MARGIN = 24
 CRUSHED_BOTTLE_DISPLAY_SECONDS = 0.7
 
 FONT_SIZE = 48

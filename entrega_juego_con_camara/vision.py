@@ -17,7 +17,7 @@ import ajustes
 
 class HandState(NamedTuple):
     position: tuple[int, int]
-    is_open: bool
+    is_slicing: bool
     radius: int
 
 
@@ -53,31 +53,21 @@ def hand_state_from_landmarks(landmarks):
         )
         for point in landmarks
     ]
-    palm_indices = (0, 5, 9, 13, 17)
-    center = (
-        round(
-            sum(screen_points[index][0] for index in palm_indices)
-            / len(palm_indices)
-        ),
-        round(
-            sum(screen_points[index][1] for index in palm_indices)
-            / len(palm_indices)
-        ),
-    )
     finger_pairs = ((8, 6), (12, 10), (16, 14), (20, 18))
-    extended_fingers = sum(
+    extended_fingers = tuple(
         math.dist(screen_points[tip], screen_points[0])
         > math.dist(screen_points[pip], screen_points[0]) * 1.12
         for tip, pip in finger_pairs
     )
+    is_slicing = extended_fingers[0] and not any(extended_fingers[1:])
     hand_width = max(point[0] for point in screen_points) - min(
         point[0] for point in screen_points
     )
     hand_height = max(point[1] for point in screen_points) - min(
         point[1] for point in screen_points
     )
-    radius = max(20, min(42, round(max(hand_width, hand_height) * 0.16)))
-    return HandState(center, extended_fingers >= 3, radius)
+    radius = max(12, min(18, round(max(hand_width, hand_height) * 0.06)))
+    return HandState(screen_points[8], is_slicing, radius)
 
 
 class Vision:

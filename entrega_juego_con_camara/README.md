@@ -1,6 +1,6 @@
 # Orbita Verde: Rescate estelar
 
-Un juego de reciclaje controlado con la cámara. El jugador mueve la mano sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que aplastar una cantidad determinada de una botella objetivo.
+Un juego de reciclaje controlado con la cámara. El jugador corta botellas con el dedo índice sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que cortar una cantidad determinada de una botella objetivo.
 
 ## Requisitos
 
@@ -21,13 +21,13 @@ La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra c
 
 ## Cómo jugar
 
-1. Al iniciar, aparece una pantalla con las opciones JUGAR, CÓMO JUGAR, RANKING y SALIR. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
-2. Abre la mano para mover el punto de contacto y ciérrala para aplastar la botella que tocaste.
-3. Cada nivel indica la botella objetivo con una imagen y su nombre. Aplastar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
-   Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia.
+1. Al iniciar, aparece una pantalla con las opciones JUGAR, CÓMO JUGAR y RANKING. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
+2. Extiende solo el dedo índice, mantén los otros dedos cerrados y pásalo sobre las botellas para cortarlas.
+3. Cada nivel indica la botella objetivo con una imagen y su nombre. Cortar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
+   Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia. Las botellas caen dentro de la zona central, con un margen lateral de 200 píxeles a cada lado.
 4. Completa los ocho niveles antes de que se termine el tiempo indicado en cada nivel:
    - Agua sin gas (verde): 6 botellas en 32 segundos.
-   - Agua con gas (verde con tapa azul): 6 en 32 segundos.
+   - Sabor uva (violeta con tapa verde): 6 en 32 segundos.
    - Sabor limón (beige): 8 en 38 segundos.
    - Sabor ananá (amarillo): 10 en 43 segundos.
    - Sabor pomelo rosado: 12 en 48 segundos.
@@ -43,18 +43,18 @@ La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra c
 
 El ranking se guarda en `ranking.json` dentro de esta carpeta y persiste entre partidas en la misma computadora.
 
-La música no es necesaria: el juego incluye efectos de sonido para aplastar botellas correctas y equivocadas.
+La música no es necesaria: el juego incluye efectos de sonido para cortar botellas correctas y equivocadas.
 
 ## Controles y cámara
 
-`vision.py` usa MediaPipe para detectar la mano y reconocer si los dedos están extendidos o cerrados, sin depender del color. La palma mueve el punto de contacto; hay que tocar la botella con la mano abierta y cerrar la mano para aplastarla. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla.
+`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de slice: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para cortarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
 
 ## Estructura
 
 - `main.py`: bucle principal, reglas, objetos y dibujo de las ocho variantes de botella.
 - `vision.py`: apertura de la cámara y detección de posición y gesto de la mano.
 - `ajustes.py`: parámetros del juego y de la cámara.
-- [Catálogo visual de botellas](assets/botellas_catalogo.png): las ocho botellas en versiones normal y aplastada.
+- [Catálogo visual de botellas](assets/botellas_catalogo.png): las ocho botellas en versiones normal y cortada.
 - `assets/models/hand_landmarker.task`: modelo de detección de manos de MediaPipe.
 - `ranking.json`: se crea al terminar la primera partida y guarda los mejores puntajes locales.
 - `assets/sounds/`: efectos de sonido.
