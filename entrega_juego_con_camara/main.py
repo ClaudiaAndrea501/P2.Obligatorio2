@@ -11,6 +11,7 @@ from vision import Vision
 
 RANKING_BUTTON_RECT = (914, 7, 38, 38)
 PAUSE_BUTTON_RECT = (870, 7, 38, 38)
+RETURN_MENU_BUTTON_RECT = (798, 7, 68, 38)
 MENU_BUTTON_RECTS = {
     "JUGAR": (72, 258, 232, 60),
     "CÓMO JUGAR": (72, 332, 232, 60),
@@ -308,7 +309,7 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
     )
     draw_wrapped_text(
         surface,
-        "Usá tu mano frente a la cámara para aplastar las botellas correctas antes de descartarlas en la papelera.",
+        "Usá tu mano frente a la cámara para aplastar las botellas correctas.",
         body_font,
         (245, 239, 250),
         pygame.Rect(92, 178, 776, 44),
@@ -342,10 +343,9 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
     )
 
     copy = (
-        "Antes de comenzar: colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
-        "Abrí la mano para mover el punto de contacto.",
+        "Antes de comenzar: colocá la mano abierta frente a la cámara y asegurate que haya buena iluminación.",
         "Cerrá la mano para aplastar las botellas indicadas en cada nivel.",
-        "Tenés 3 vidas para completar la misión y 8 niveles que completar.",
+        "Tenés tres vidas para completar la misión y 8 niveles que completar.",
     )
     y = instructions.top + 76
     for paragraph in copy:
@@ -412,10 +412,9 @@ def draw_instructions_overlay(surface, title_font, body_font):
     )
 
     copy = (
-        "Antes de comenzar: colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
-        "Abrí la mano para mover el punto de contacto.",
+        "Antes de comenzar: colocá la mano abierta frente a la cámara y asegurate que haya buena iluminación.",
         "Cerrá la mano para aplastar las botellas indicadas en cada nivel.",
-        "Tenés 3 vidas para completar la misión y 8 niveles que completar.",
+        "Tenés tres vidas para completar la misión y 8 niveles que completar.",
     )
     y = panel.top + 96
     for paragraph in copy:
@@ -559,7 +558,7 @@ def draw_hud(
     info_cards = (
         pygame.Rect(18, 8, 270, 34),
         pygame.Rect(300, 8, 270, 34),
-        pygame.Rect(582, 8, 270, 34),
+        pygame.Rect(582, 8, 210, 34),
     )
     warning_active = (
         game_state == "playing" and remaining <= ajustes.TIME_WARNING_SECONDS
@@ -668,6 +667,13 @@ def draw_hud(
     for index in range(lives):
         heart_x = lives_left + lives_label_width + 16 + 10 + index * 36
         draw_life_heart(surface, (heart_x, lives_card.centery), (224, 74, 73))
+    draw_menu_button(
+        surface,
+        pygame.Rect(RETURN_MENU_BUTTON_RECT),
+        "SALIR",
+        small_font,
+        (118, 79, 151),
+    )
     ranking_button = pygame.Rect(RANKING_BUTTON_RECT)
     pygame.draw.rect(surface, (19, 174, 145), ranking_button, border_radius=12)
     pygame.draw.rect(
@@ -1024,28 +1030,22 @@ def draw_level_intro(
         (details.right - 24, details.top + 230),
         2,
     )
-    draw_text(
+    draw_wrapped_text(
         surface,
-        "Abrí la mano para mover el punto de contacto",
+        "Mostrá la mano abierta para identificar las botellas indicadas.",
         body_font,
         (238, 213, 255),
-        (details.centerx, details.top + 258),
+        pygame.Rect(details.left + 18, details.top + 240, details.width - 36, 52),
+        line_spacing=0,
         centered=True,
     )
-    draw_text(
+    draw_wrapped_text(
         surface,
-        "Cerrá la mano para aplastar la botella objetivo",
+        "Las botellas aplastadas de otro color quitan una vida.",
         body_font,
         (238, 213, 255),
-        (details.centerx, details.top + 292),
-        centered=True,
-    )
-    draw_text(
-        surface,
-        "Las botellas de otro color quitan una vida",
-        body_font,
-        (238, 213, 255),
-        (details.centerx, details.top + 326),
+        pygame.Rect(details.left + 18, details.top + 296, details.width - 36, 52),
+        line_spacing=0,
         centered=True,
     )
 
@@ -1206,12 +1206,22 @@ def main():
                                 elif label == "RANKING":
                                     menu_overlay = "ranking"
                                 elif label == "SALIR":
-                                    running = False
+                                    game_state = "menu"
+                                    menu_overlay = ""
+                                    ranking_open = False
                                 break
                     elif game_state in {"playing", "paused"} and (
                         game_state == "paused" or level_banner_time <= 0
                     ):
-                        if pygame.Rect(RANKING_BUTTON_RECT).collidepoint(mouse_position):
+                        if pygame.Rect(RETURN_MENU_BUTTON_RECT).collidepoint(
+                            mouse_position
+                        ):
+                            game_state = "menu"
+                            ranking_open = False
+                            menu_overlay = ""
+                        elif pygame.Rect(RANKING_BUTTON_RECT).collidepoint(
+                            mouse_position
+                        ):
                             ranking_open = not ranking_open
                         elif ranking_open:
                             ranking_open = False
@@ -1383,20 +1393,45 @@ def main():
                 and game_state == "playing"
                 and level_banner_time <= 0
             ):
+                warning_panel = pygame.Rect(
+                    ajustes.WINDOW_WIDTH // 2 - 250,
+                    ajustes.WINDOW_HEIGHT - 104,
+                    500,
+                    84,
+                )
+                pygame.draw.rect(
+                    screen,
+                    (18, 14, 25, 245),
+                    warning_panel.move(0, 5),
+                    border_radius=18,
+                )
+                pygame.draw.rect(
+                    screen,
+                    (50, 33, 65),
+                    warning_panel,
+                    border_radius=18,
+                )
+                pygame.draw.rect(
+                    screen,
+                    (192, 150, 218),
+                    warning_panel,
+                    width=2,
+                    border_radius=18,
+                )
                 draw_text(
                     screen,
-                    "No detecto la mano",
-                    small_font,
+                    "No detecto la mano.",
+                    menu_body_font,
                     ajustes.WARNING_COLOR,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 52),
+                    (warning_panel.centerx, warning_panel.top + 27),
                     centered=True,
                 )
                 draw_text(
                     screen,
-                    "Muestra la mano abierta frente a la cámara",
-                    small_font,
+                    "Mostrá la mano frente a la cámara.",
+                    menu_body_font,
                     ajustes.WARNING_COLOR,
-                    (ajustes.WINDOW_WIDTH // 2, ajustes.WINDOW_HEIGHT - 22),
+                    (warning_panel.centerx, warning_panel.top + 57),
                     centered=True,
                 )
 
