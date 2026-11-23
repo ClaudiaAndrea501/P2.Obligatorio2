@@ -15,7 +15,7 @@ PAUSE_BUTTON_RECT = (870, 7, 38, 38)
 RETURN_MENU_BUTTON_RECT = (798, 7, 68, 38)
 MENU_BUTTON_RECTS = {
     "JUGAR": (72, 295, 232, 60),
-    "CÓMO JUGAR": (72, 369, 232, 60),
+    "INSTRUCCIONES": (72, 369, 232, 60),
     "RANKING": (72, 443, 232, 60),
 }
 INSTRUCTIONS_PANEL_RECT = (160, 110, 640, 420)
@@ -25,14 +25,20 @@ RANKING_PANEL_RECT = (128, 126, 704, 470)
 
 # Representa la posición de la mano que el jugador usa para interactuar.
 class Player:
+    """Representa el marcador controlado por el índice detectado."""
+
     # Inicia el marcador de contacto en el centro y cerca de la parte inferior.
     def __init__(self):
+        """Inicia el jugador en el centro cercano a la parte inferior."""
+
         self.x = ajustes.WINDOW_WIDTH / 2
         self.y = ajustes.WINDOW_HEIGHT - 95
         self.radius = ajustes.PLAYER_RADIUS
 
     # Sigue la posición detectada suavizando los cambios bruscos.
     def follow(self, target):
+        """Mueve suavemente el jugador hacia una posición detectada."""
+
         if target is None:
             return
         target_x, target_y = target
@@ -42,8 +48,12 @@ class Player:
 
 # Representa cada botella que cae y su estado durante la partida.
 class FallingObject:
+    """Representa una botella que cae y puede ser compactada."""
+
     # Inicializa la variante indicada con posición y velocidad aleatorias.
     def __init__(self, bottle_variant):
+        """Inicializa una botella con una variante y valores aleatorios."""
+
         self.bottle_variant = bottle_variant
         width, height = self.bounds_size
         min_x = ajustes.BOTTLE_SIDE_MARGIN + width // 2
@@ -59,11 +69,15 @@ class FallingObject:
     # Devuelve el tamaño usado para mantener la botella dentro de la pantalla.
     @property
     def bounds_size(self):
+        """Devuelve el tamaño usado para limitar la botella en pantalla."""
+
         return (72, ajustes.BOTTLE_SPRITE_SIZE[1])
 
     # Usa una silueta más baja mientras se muestra una botella aplastada.
     @property
     def sprite_size(self):
+        """Devuelve el tamaño normal o aplastado según el estado actual."""
+
         if self.crushed:
             return (72, 27)
         return ajustes.BOTTLE_SPRITE_SIZE
@@ -71,6 +85,8 @@ class FallingObject:
     # Indica si la botella todavía está dentro de los límites visibles.
     @property
     def is_fully_visible(self):
+        """Indica si la silueta completa de la botella es visible."""
+
         width, height = self.sprite_size
         rect = pygame.Rect(0, 0, width, height)
         rect.center = (int(self.x), int(self.y))
@@ -83,6 +99,8 @@ class FallingObject:
 
     # Mueve la botella y gestiona el tiempo durante el que se ve aplastada.
     def update(self, delta_time):
+        """Actualiza la caída, el balanceo y el tiempo aplastado."""
+
         if self.crushed:
             self.crushed_time = max(0, self.crushed_time - delta_time)
             if self.crushed_time == 0:
@@ -102,6 +120,8 @@ class FallingObject:
 
     # Dibuja la botella normal o su versión aplastada.
     def draw(self, surface, bottle_sprites, crushed_bottle_sprites):
+        """Dibuja la versión normal o aplastada de la botella."""
+
         center = (int(self.x), int(self.y))
         sprites = crushed_bottle_sprites if self.crushed else bottle_sprites
         sprite = sprites[self.bottle_variant]
@@ -109,6 +129,8 @@ class FallingObject:
 
     # Marca la botella como aplastada una sola vez.
     def crush(self):
+        """Marca una botella como compactada una sola vez y devuelve el resultado."""
+
         if self.crushed:
             return False
         self.crushed = True
@@ -118,15 +140,21 @@ class FallingObject:
 
 # Dibuja una botella vectorial y la escala al tamaño usado por el juego.
 def create_bottle_sprite(body_color, edge_color, cap_color, cap_edge_color):
+    """Crea y devuelve una imagen vectorial de botella."""
+
     scale = 3
     width, height = ajustes.BOTTLE_SPRITE_SIZE
     sprite = pygame.Surface((width * scale, height * scale), pygame.SRCALPHA)
 
     # Convierte coordenadas del dibujo a píxeles de la imagen ampliada.
     def point(x, y):
+        """Convierte una coordenada del dibujo a píxeles ampliados."""
+
         return int(x * scale * 1.5), int(y * scale * 1.5)
 
     def size(value):
+        """Convierte una medida del dibujo al tamaño ampliado equivalente."""
+
         return round(value * scale * 1.5)
 
     # Traza el contorno del cuerpo y el cuello de la botella.
@@ -196,6 +224,8 @@ def create_bottle_sprite(body_color, edge_color, cap_color, cap_edge_color):
 
 # Crea la imagen aplanada que se muestra después de aplastar una botella.
 def create_crushed_bottle_sprite(bottle_sprite):
+    """Crea la imagen horizontal usada al aplastar una botella."""
+
     return pygame.transform.smoothscale(bottle_sprite, (72, 27)).convert_alpha()
 
 
@@ -209,6 +239,8 @@ def draw_text(
     centered=False,
     right_aligned=False,
 ):
+    """Renderiza texto alineado y devuelve su rectángulo."""
+
     image = font.render(text, True, color)
     rect = image.get_rect()
     if centered:
@@ -231,6 +263,8 @@ def draw_wrapped_text(
     line_spacing=3,
     centered=False,
 ):
+    """Divide texto largo en líneas y lo dibuja dentro de un rectángulo."""
+
     words = text.split()
     lines = []
     current_line = ""
@@ -259,6 +293,8 @@ def draw_wrapped_text(
 
 # Dibuja un botón con sombra, borde y texto centrado.
 def draw_menu_button(surface, rect, label, font, color):
+    """Dibuja un botón de menú con sombra, borde y texto."""
+
     pygame.draw.rect(surface, (28, 19, 38, 235), rect.move(0, 5), border_radius=17)
     pygame.draw.rect(surface, color, rect, border_radius=17)
     pygame.draw.rect(
@@ -299,6 +335,8 @@ def draw_menu_button(surface, rect, label, font, color):
 
 # Dibuja la pantalla inicial, sus instrucciones y los botones del menú.
 def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font):
+    """Dibuja la pantalla principal y sus instrucciones resumidas."""
+
     # Construye el panel principal y presenta el título y la descripción.
     pygame.draw.rect(surface, (24, 21, 29, 190), surface.get_rect())
     panel = pygame.Rect(40, 28, 880, 584)
@@ -338,7 +376,7 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
     )
     draw_wrapped_text(
         surface,
-        "Usá tu dedo índice frente a la cámara para cortar las botellas correctas.",
+        "Usá tu dedo índice frente a la cámara para compactar las botellas correctas.",
         body_font,
         (245, 239, 250),
         pygame.Rect(92, 178, 776, 44),
@@ -365,7 +403,7 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
     )
     draw_text(
         surface,
-        "CÓMO JUGAR",
+        "INSTRUCCIONES",
         subtitle_font,
         (255, 255, 255),
         (header.centerx, header.centery),
@@ -374,7 +412,7 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
 
     copy = (
         "Colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
-        "Extendé el índice, cerrá los otros dedos y pasalo sobre las botellas para cortarlas.",
+        "Extendé el índice, cerrá los otros dedos y pasalo sobre las botellas para compactarlas.",
         "Tenés tres vidas para completar la misión y 8 niveles que completar.",
     )
     y = instructions.top + 76
@@ -386,12 +424,12 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
             (255, 255, 255),
             pygame.Rect(instructions.left + 25, y, instructions.width - 50, 80),
             line_spacing=1,
-        ) + 5
+        ) + 18
 
     # Dibuja los botones disponibles en el menú.
     button_colors = {
         "JUGAR": (16, 166, 207),
-        "CÓMO JUGAR": (133, 78, 167),
+        "INSTRUCCIONES": (133, 78, 167),
         "RANKING": (19, 174, 145),
     }
     for label, button_rect in MENU_BUTTON_RECTS.items():
@@ -406,6 +444,8 @@ def draw_start_screen(surface, title_font, subtitle_font, body_font, button_font
 
 # Presenta las instrucciones en una capa que se puede cerrar desde el menú.
 def draw_instructions_overlay(surface, title_font, body_font):
+    """Dibuja el panel emergente con las instrucciones completas."""
+
     panel = pygame.Rect(INSTRUCTIONS_PANEL_RECT)
     # Dibuja el fondo y el encabezado del panel emergente.
     pygame.draw.rect(surface, (18, 14, 25, 245), panel.move(0, 7), border_radius=24)
@@ -421,7 +461,7 @@ def draw_instructions_overlay(surface, title_font, body_font):
     )
     draw_text(
         surface,
-        "CÓMO JUGAR",
+        "INSTRUCCIONES",
         title_font,
         (255, 255, 255),
         (panel.centerx, header.centery),
@@ -446,7 +486,7 @@ def draw_instructions_overlay(surface, title_font, body_font):
 
     copy = (
         "Colocá la mano frente a la cámara y asegurate que haya buena iluminación.",
-        "Extendé el índice, cerrá los otros dedos y pasalo sobre las botellas para cortarlas.",
+        "Extendé el índice, cerrá los otros dedos y pasalo sobre las botellas para compactarlas.",
         "Tenés tres vidas para completar la misión y 8 niveles que completar.",
     )
     y = panel.top + 96
@@ -458,7 +498,7 @@ def draw_instructions_overlay(surface, title_font, body_font):
             (255, 255, 255),
             pygame.Rect(panel.left + 34, y, panel.width - 68, 80),
             line_spacing=2,
-        ) + 12
+        ) + 24
     draw_text(
         surface,
         "Presioná Esc para volver",
@@ -471,6 +511,8 @@ def draw_instructions_overlay(surface, title_font, body_font):
 
 # Elige una botella objetivo o una variante incorrecta para el nivel.
 def spawn_object(target_variant):
+    """Crea una botella objetivo o incorrecta según la probabilidad configurada."""
+
     variants = tuple(ajustes.BOTTLE_VARIANTS)
     if random.random() < ajustes.BOTTLE_TARGET_CHANCE:
         variant = target_variant
@@ -484,6 +526,8 @@ def spawn_object(target_variant):
 
 # Devuelve los valores iniciales para comenzar una partida nueva.
 def reset_game():
+    """Devuelve el estado inicial completo de una partida nueva."""
+
     return (
         Player(),
         [],
@@ -498,6 +542,8 @@ def reset_game():
 
 # Carga el ranking, valida sus datos y devuelve las mejores puntuaciones.
 def load_ranking():
+    """Carga, valida y devuelve los mejores puntajes ordenados."""
+
     if not ajustes.RANKING_PATH.exists():
         return []
 
@@ -529,6 +575,8 @@ def load_ranking():
 
 # Agrega una puntuación, conserva el orden y guarda el ranking en disco.
 def save_ranking_score(ranking, player_name, score):
+    """Agrega un puntaje, conserva los mejores y actualiza el archivo."""
+
     updated_ranking = [*ranking, {"name": player_name, "score": score}]
     updated_ranking.sort(key=lambda entry: (-entry["score"], entry["name"].casefold()))
     updated_ranking = updated_ranking[:ajustes.MAX_RANKING_ENTRIES]
@@ -541,6 +589,8 @@ def save_ranking_score(ranking, player_name, score):
 
 # Comprueba si el puntaje entra entre las posiciones disponibles del ranking.
 def qualifies_for_ranking(ranking, score):
+    """Indica si un puntaje puede ingresar al ranking disponible."""
+
     return (
         len(ranking) < ajustes.MAX_RANKING_ENTRIES
         or score > ranking[-1]["score"]
@@ -549,6 +599,8 @@ def qualifies_for_ranking(ranking, score):
 
 # Genera el fondo degradado de la barra superior del juego.
 def create_hud_background():
+    """Crea y devuelve el fondo degradado de la barra superior."""
+
     width, height = ajustes.WINDOW_WIDTH, 112
     background = pygame.Surface((width, height))
     start_color = (129, 79, 159)
@@ -565,6 +617,8 @@ def create_hud_background():
 
 # Dibuja un corazón que representa una vida en la interfaz.
 def draw_life_heart(surface, center, color):
+    """Dibuja un corazón rojo que representa una vida disponible."""
+
     x, y = center
     pygame.draw.circle(surface, color, (x - 5, y - 3), 5)
     pygame.draw.circle(surface, color, (x + 5, y - 3), 5)
@@ -587,6 +641,8 @@ def draw_hud(
     bottle_hud_sprites,
     hud_background,
 ):
+    """Dibuja nivel, progreso, tiempo, objetivo y vidas."""
+
     level = ajustes.LEVELS[level_index]
     hud_color = (255, 255, 255)
     warning_color = (255, 205, 132)
@@ -601,8 +657,8 @@ def draw_hud(
         2,
     )
     info_cards = (
-        pygame.Rect(18, 8, 270, 34),
-        pygame.Rect(300, 8, 270, 34),
+        pygame.Rect(18, 8, 340, 34),
+        pygame.Rect(370, 8, 200, 34),
         pygame.Rect(582, 8, 210, 34),
     )
     warning_active = (
@@ -629,7 +685,7 @@ def draw_hud(
         )
     draw_text(
         surface,
-        f"BOTELLAS  {level_bottles}/{level['bottles_to_collect']}",
+        f"BOTELLAS COMPACTADAS  {level_bottles}/{level['bottles_to_collect']}",
         small_font,
         hud_color,
         info_cards[0].center,
@@ -665,7 +721,7 @@ def draw_hud(
             border_radius=15,
         )
     target_sprite = bottle_hud_sprites[level["bottle_variant"]]
-    target_label_width = small_font.size("CORTA:")[0]
+    target_label_width = small_font.size("COMPACTA:")[0]
     target_name_width = small_font.size(level["name"])[0]
     target_sprite_width = target_sprite.get_width()
     target_content_width = (
@@ -675,7 +731,7 @@ def draw_hud(
     target_center_y = target_card.centery
     draw_text(
         surface,
-        "CORTA:",
+        "COMPACTA:",
         small_font,
         hud_color,
         (target_left + target_label_width // 2, target_center_y),
@@ -815,6 +871,8 @@ def draw_ranking_overlay(
     return_to_game=False,
     return_to_menu=False,
 ):
+    """Dibuja el panel del ranking y las acciones disponibles."""
+
     panel = pygame.Rect(128, 126, 704, 470)
     # Dibuja el panel y el encabezado del ranking.
     pygame.draw.rect(surface, (19, 16, 25), panel.move(0, 7), border_radius=24)
@@ -927,6 +985,8 @@ def draw_ranking_overlay(
 
 # Dibuja la capa que oscurece la partida y explica cómo reanudarla.
 def draw_pause_overlay(surface, font, small_font):
+    """Dibuja la capa que informa que el juego está pausado."""
+
     panel = pygame.Rect(160, 222, 640, 210)
     pygame.draw.rect(surface, (19, 16, 25), panel.move(0, 7), border_radius=24)
     pygame.draw.rect(surface, (79, 48, 101), panel, border_radius=24)
@@ -968,6 +1028,8 @@ def draw_level_intro(
     subtitle_font,
     body_font,
 ):
+    """Presenta el objetivo y la cuenta regresiva antes de un nivel."""
+
     level = ajustes.LEVELS[level_index]
 
     # Dibuja el fondo, el marco y el encabezado con el número de nivel.
@@ -1046,7 +1108,7 @@ def draw_level_intro(
     )
     draw_text(
         surface,
-        "CORTA SOLO",
+        "COMPACTA SOLO",
         subtitle_font,
         (100, 221, 255),
         (details.centerx, details.top + 37),
@@ -1062,7 +1124,7 @@ def draw_level_intro(
     )
     draw_text(
         surface,
-        f"OBJETIVO: {level['bottles_to_collect']} botellas",
+        f"OBJETIVO: {level['bottles_to_collect']} botellas compactadas",
         body_font,
         (255, 255, 255),
         (details.centerx, details.top + 132),
@@ -1093,7 +1155,7 @@ def draw_level_intro(
     )
     draw_wrapped_text(
         surface,
-        "Pasá el índice extendido sobre la botella para cortarla.",
+        "Pasá el índice extendido sobre la botella para compactarla.",
         body_font,
         (238, 213, 255),
         pygame.Rect(details.left + 18, details.top + 240, details.width - 36, 52),
@@ -1102,7 +1164,7 @@ def draw_level_intro(
     )
     draw_wrapped_text(
         surface,
-        "Las botellas cortadas de otro color quitan una vida.",
+        "Las botellas compactadas de otro color quitan una vida.",
         body_font,
         (238, 213, 255),
         pygame.Rect(details.left + 18, details.top + 296, details.width - 36, 52),
@@ -1132,6 +1194,8 @@ def draw_level_intro(
 
 # Inicializa los recursos y ejecuta el ciclo principal del juego.
 def main():
+    """Inicializa recursos y ejecuta el bucle principal del juego."""
+
     # Prepara Pygame y detiene el inicio si no se puede activar el audio.
     pygame.init()
     try:
@@ -1281,7 +1345,7 @@ def main():
                                     result_state = ""
                                     ranking_open = False
                                     menu_overlay = ""
-                                elif label == "CÓMO JUGAR":
+                                elif label == "INSTRUCCIONES":
                                     menu_overlay = "instructions"
                                 elif label == "RANKING":
                                     menu_overlay = "ranking"
@@ -1379,7 +1443,7 @@ def main():
                     objects.append(spawn_object(level["bottle_variant"]))
                     spawn_elapsed -= ajustes.SPAWN_INTERVAL
 
-                # Corta una botella cuando el índice extendido la alcanza.
+                # Compacta una botella cuando el índice extendido la alcanza.
                 for falling_object in objects:
                     falling_object.update(delta_time)
                     if falling_object.crushed:

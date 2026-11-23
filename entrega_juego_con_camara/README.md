@@ -1,6 +1,6 @@
 # Orbita Verde: Rescate estelar
 
-Un juego de reciclaje controlado con la cámara. El jugador corta botellas con el dedo índice sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que cortar una cantidad determinada de una botella objetivo.
+Un juego de reciclaje controlado con la cámara. El jugador compacta botellas con el dedo índice sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que compactar una cantidad determinada de una botella objetivo.
 
 ## Requisitos
 
@@ -8,7 +8,7 @@ Un juego de reciclaje controlado con la cámara. El jugador corta botellas con e
 - Una webcam habilitada que muestre la mano del jugador.
 - Dependencias instaladas desde `requirements.txt`.
 
-## Instalacion y ejecucion
+## Instalación y ejecución
 
 Desde esta carpeta, ejecuta:
 
@@ -19,15 +19,15 @@ python main.py
 
 La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra cámara, cambia `CAMERA_INDEX` en `ajustes.py`. El juego solicita video a 1280 x 720 para mejorar la nitidez; la resolución efectiva depende de lo que admita la webcam. La imagen se muestra directamente a resolución de pantalla y sin filtros de suavizado.
 
-## Cómo jugar
+## Instrucciones
 
-1. Al iniciar, aparece una pantalla con las opciones JUGAR, CÓMO JUGAR y RANKING. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
-2. Extiende solo el dedo índice, mantén los otros dedos cerrados y pásalo sobre las botellas para cortarlas.
-3. Cada nivel indica la botella objetivo con una imagen y su nombre. Cortar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
+1. Al iniciar, aparece una pantalla con las opciones JUGAR, INSTRUCCIONES y RANKING. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
+2. Extiende solo el dedo índice, mantén los otros dedos cerrados y pásalo sobre las botellas para compactarlas.
+3. Cada nivel indica la botella objetivo con una imagen y su nombre. Compactar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
    Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia. Las botellas caen dentro de la zona central, con un margen lateral de 200 píxeles a cada lado.
 4. Completa los ocho niveles antes de que se termine el tiempo indicado en cada nivel:
    - Agua sin gas (verde): 6 botellas en 32 segundos.
-   - Sabor uva (violeta con tapa verde): 6 en 32 segundos.
+   - Sabor uva (violeta): 6 en 32 segundos.
    - Sabor limón (beige): 8 en 38 segundos.
    - Sabor ananá (amarillo): 10 en 43 segundos.
    - Sabor pomelo rosado: 12 en 48 segundos.
@@ -43,18 +43,32 @@ La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra c
 
 El ranking se guarda en `ranking.json` dentro de esta carpeta y persiste entre partidas en la misma computadora.
 
-La música no es necesaria: el juego incluye efectos de sonido para cortar botellas correctas y equivocadas.
+La música no es necesaria: el juego incluye efectos de sonido para compactar botellas correctas y equivocadas.
 
 ## Controles y cámara
 
-`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de slice: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para cortarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
+`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de slice: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para compactarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
+
+### Flujo del juego
+
+![Diagrama de flujo del juego](assets/diagrama_flujo_juego.svg)
+
+La partida comienza con tres vidas. Para superar cada nivel hay que compactar la cantidad indicada de botellas objetivo antes de que se termine el tiempo de ese nivel; compactar una botella de otro color resta una vida. Al completar un nivel se presenta el siguiente. Se gana al completar el octavo nivel y se pierde si se agotan las vidas o el tiempo. Al finalizar, si el puntaje puede entrar entre los cinco mejores, se pide un nombre y se guarda al presionar `Enter`; en caso contrario se muestra el resultado y el ranking. `R` inicia una partida nueva desde la pantalla del ranking. Desde el menú se pueden abrir y cerrar las instrucciones y el ranking; durante la partida, el botón de la copa muestra el ranking en una capa superpuesta y detiene temporalmente el juego.
+
+### Qué detecta la cámara y por qué
+
+La cámara entrega video en vivo; el programa espeja cada cuadro y MediaPipe busca una mano (hasta una). El modelo devuelve puntos de referencia de la mano. El juego usa la punta del índice como posición de contacto y compara los puntos de los dedos con la muñeca para reconocer el gesto: el índice extendido y los otros tres dedos cerrados habilitan el corte. Así se controla el juego con la mano, sin sostener un marcador de color ni dibujar un cursor sobre el video.
+
+En un prototipo anterior se probó detectar un objeto verde con segmentación HSV de OpenCV. No se conservó como control final porque requería tener a mano un objeto de ese color, buena iluminación y separarlo de otros elementos verdes. La detección actual sigue la mano y su postura directamente.
+
+Si no se detecta una mano, el control queda en su última posición, pero no se pueden compactar botellas; aparece el aviso «No detecto la mano. Mostrá la mano frente a la cámara». La partida sigue corriendo, así que el tiempo continúa y se puede perder por agotarlo. Si la cámara no se puede abrir al iniciar, el juego informa el error y se cierra.
 
 ## Estructura
 
 - `main.py`: bucle principal, reglas, objetos y dibujo de las ocho variantes de botella.
 - `vision.py`: apertura de la cámara y detección de posición y gesto de la mano.
 - `ajustes.py`: parámetros del juego y de la cámara.
-- [Catálogo visual de botellas](assets/botellas_catalogo.png): las ocho botellas en versiones normal y cortada.
+- [Catálogo visual de botellas](assets/botellas_catalogo.png): las ocho botellas en versiones normal y compactada.
 - `assets/models/hand_landmarker.task`: modelo de detección de manos de MediaPipe.
 - `ranking.json`: se crea al terminar la primera partida y guarda los mejores puntajes locales.
 - `assets/sounds/`: efectos de sonido.
