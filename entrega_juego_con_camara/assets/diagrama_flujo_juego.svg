@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1700" viewBox="0 0 1400 1700" role="img" aria-labelledby="title description">
+  <title id="title">Diagrama de flujo de Misión Reciclaje Botellas</title>
+  <desc id="description">Flujo desde el menú y los ocho niveles hasta la victoria o derrota, el ranking y el reinicio.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#58416f"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", Arial, sans-serif; fill: #30243c; }
+      .title { font-size: 40px; font-weight: 700; }
+      .subtitle { font-size: 20px; fill: #665777; }
+      .node { fill: #ffffff; stroke: #8c69a7; stroke-width: 3; }
+      .action { fill: #ede5f5; stroke: #8c69a7; stroke-width: 3; }
+      .success { fill: #def4e7; stroke: #3e9971; stroke-width: 3; }
+      .failure { fill: #ffe5e2; stroke: #d26c63; stroke-width: 3; }
+      .decision { fill: #fff3cc; stroke: #c89d35; stroke-width: 3; }
+      .flow { fill: none; stroke: #58416f; stroke-width: 3; marker-end: url(#arrow); }
+      .label { font-size: 18px; font-weight: 600; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #665777; }
+      .tag { font-size: 16px; font-weight: 700; fill: #58416f; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1700" rx="28" fill="#f8f5fb"/>
+  <text class="title" x="700" y="58" text-anchor="middle">Flujo del jugador</text>
+  <text class="subtitle" x="700" y="91" text-anchor="middle">Misión Reciclaje Botellas · objetivo: completar los ocho niveles</text>
+
+  <ellipse class="node" cx="700" cy="145" rx="145" ry="42"/>
+  <text class="label" x="700" y="152" text-anchor="middle">Inicio</text>
+
+  <path class="flow" d="M700 187 V218"/>
+  <rect class="node" x="490" y="220" width="420" height="76" rx="18"/>
+  <text class="label" x="700" y="251" text-anchor="middle">Menú</text>
+  <text class="small" x="700" y="278" text-anchor="middle">JUGAR</text>
+
+  <path class="flow" d="M700 296 V327"/>
+  <rect class="action" x="490" y="329" width="420" height="82" rx="18"/>
+  <text class="label" x="700" y="363" text-anchor="middle">Presentación del nivel</text>
+  <text class="small" x="700" y="390" text-anchor="middle">objetivo y cuenta regresiva de 4 s</text>
+
+  <path class="flow" d="M700 411 V442"/>
+  <rect class="action" x="445" y="444" width="510" height="112" rx="18"/>
+  <text class="label" x="700" y="477" text-anchor="middle">Jugando</text>
+  <text class="body" x="700" y="506" text-anchor="middle">Objetivo correcto: suma progreso</text>
+  <text class="body" x="700" y="533" text-anchor="middle">Color equivocado: pierde una vida</text>
+
+  <rect class="node" x="60" y="455" width="300" height="88" rx="16"/>
+  <text class="label" x="210" y="488" text-anchor="middle">Pausa opcional</text>
+  <text class="small" x="210" y="516" text-anchor="middle">P o botón: pausar / reanudar</text>
+  <path class="flow" d="M445 500 H362"/>
+  <path class="flow" d="M362 528 H445"/>
+
+  <path class="flow" d="M700 556 V597"/>
+  <polygon class="decision" points="700,599 925,680 700,761 475,680"/>
+  <text class="label" x="700" y="674" text-anchor="middle">¿Completó la meta</text>
+  <text class="label" x="700" y="700" text-anchor="middle">de este nivel?</text>
+
+  <path class="flow" d="M700 761 V785 H400 V803"/>
+  <text class="tag" x="650" y="778">SÍ</text>
+  <polygon class="decision" points="400,803 605,882 400,961 195,882"/>
+  <text class="label" x="400" y="876" text-anchor="middle">¿Es el</text>
+  <text class="label" x="400" y="902" text-anchor="middle">nivel 8?</text>
+
+  <path class="flow" d="M925 680 H1030 V803"/>
+  <text class="tag" x="945" y="664">NO</text>
+  <polygon class="decision" points="1030,803 1235,882 1030,961 825,882"/>
+  <text class="label" x="1030" y="876" text-anchor="middle">¿Vidas = 0 o</text>
+  <text class="label" x="1030" y="902" text-anchor="middle">tiempo = 0?</text>
+
+  <path class="flow" d="M195 882 H30 V370 H488"/>
+  <text class="tag" x="105" y="860">NO: siguiente nivel</text>
+
+  <path class="flow" d="M400 961 V1001"/>
+  <text class="tag" x="418" y="988">SÍ</text>
+  <rect class="success" x="245" y="1003" width="310" height="86" rx="18"/>
+  <text class="label" x="400" y="1055" text-anchor="middle">Victoria</text>
+
+  <path class="flow" d="M1030 961 V1001"/>
+  <text class="tag" x="1048" y="988">SÍ</text>
+  <rect class="failure" x="875" y="1003" width="310" height="86" rx="18"/>
+  <text class="label" x="1030" y="1055" text-anchor="middle">Derrota</text>
+
+  <path class="flow" d="M1235 882 H1320 V500 H958"/>
+  <text class="tag" x="1305" y="983" text-anchor="end">NO: sigue jugando</text>
+
+  <path class="flow" d="M400 1089 V1160 H700 V1192"/>
+  <path class="flow" d="M1030 1089 V1160 H700 V1192"/>
+  <polygon class="decision" points="700,1194 910,1270 700,1346 490,1270"/>
+  <text class="label" x="700" y="1264" text-anchor="middle">¿Puntaje entra</text>
+  <text class="label" x="700" y="1290" text-anchor="middle">en el top 5?</text>
+
+  <path class="flow" d="M490 1270 H400 V1383"/>
+  <text class="tag" x="422" y="1254">SÍ</text>
+  <rect class="node" x="235" y="1383" width="330" height="92" rx="18"/>
+  <text class="label" x="400" y="1418" text-anchor="middle">Ingresar nombre</text>
+  <text class="small" x="400" y="1447" text-anchor="middle">Enter guarda el puntaje</text>
+
+  <text class="tag" x="928" y="1254">NO</text>
+  <path class="flow" d="M910 1270 H1200 V1515 H850 V1541"/>
+  <path class="flow" d="M400 1475 V1515 H700 V1541"/>
+  <rect class="action" x="445" y="1541" width="510" height="86" rx="18"/>
+  <text class="label" x="700" y="1575" text-anchor="middle">Resultado y Ranking final</text>
+  <text class="small" x="700" y="1603" text-anchor="middle">R inicia una partida nueva</text>
+
+  <path class="flow" d="M955 1578 H1350 V370 H912"/>
+  <text class="tag" x="1324" y="1015" transform="rotate(-90 1324 1015)">R: volver a jugar</text>
+
+  <text class="small" x="700" y="1650" text-anchor="middle">Sin cámara disponible al inicio: el juego informa el error y no comienza.</text>
+</svg>

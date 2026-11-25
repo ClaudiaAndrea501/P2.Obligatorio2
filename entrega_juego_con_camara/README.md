@@ -1,4 +1,4 @@
-# Orbita Verde: Rescate estelar
+# Misión Reciclaje: Botellas 
 
 Un juego de reciclaje controlado con la cámara. El jugador compacta botellas con el dedo índice sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que compactar una cantidad determinada de una botella objetivo.
 
@@ -47,21 +47,9 @@ La música no es necesaria: el juego incluye efectos de sonido para compactar bo
 
 ## Controles y cámara
 
-`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de slice: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para compactarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
+`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de compactar: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para compactarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
 
-### Flujo del juego
 
-![Diagrama de flujo del juego](assets/diagrama_flujo_juego.svg)
-
-La partida comienza con tres vidas. Para superar cada nivel hay que compactar la cantidad indicada de botellas objetivo antes de que se termine el tiempo de ese nivel; compactar una botella de otro color resta una vida. Al completar un nivel se presenta el siguiente. Se gana al completar el octavo nivel y se pierde si se agotan las vidas o el tiempo. Al finalizar, si el puntaje puede entrar entre los cinco mejores, se pide un nombre y se guarda al presionar `Enter`; en caso contrario se muestra el resultado y el ranking. `R` inicia una partida nueva desde la pantalla del ranking. Desde el menú se pueden abrir y cerrar las instrucciones y el ranking; durante la partida, el botón de la copa muestra el ranking en una capa superpuesta y detiene temporalmente el juego.
-
-### Qué detecta la cámara y por qué
-
-La cámara entrega video en vivo; el programa espeja cada cuadro y MediaPipe busca una mano (hasta una). El modelo devuelve puntos de referencia de la mano. El juego usa la punta del índice como posición de contacto y compara los puntos de los dedos con la muñeca para reconocer el gesto: el índice extendido y los otros tres dedos cerrados habilitan el corte. Así se controla el juego con la mano, sin sostener un marcador de color ni dibujar un cursor sobre el video.
-
-En un prototipo anterior se probó detectar un objeto verde con segmentación HSV de OpenCV. No se conservó como control final porque requería tener a mano un objeto de ese color, buena iluminación y separarlo de otros elementos verdes. La detección actual sigue la mano y su postura directamente.
-
-Si no se detecta una mano, el control queda en su última posición, pero no se pueden compactar botellas; aparece el aviso «No detecto la mano. Mostrá la mano frente a la cámara». La partida sigue corriendo, así que el tiempo continúa y se puede perder por agotarlo. Si la cámara no se puede abrir al iniciar, el juego informa el error y se cierra.
 
 ## Estructura
 
