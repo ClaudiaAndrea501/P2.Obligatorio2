@@ -1,4 +1,4 @@
-# Misión Reciclaje: Botellas 
+# Misión Reciclaje: Botellas
 
 Un juego de reciclaje controlado con la cámara. El jugador compacta botellas con el dedo índice sobre la imagen de la cámara, que ocupa toda la pantalla. La partida tiene ocho niveles: en cada uno hay que compactar una cantidad determinada de una botella objetivo.
 
@@ -21,35 +21,22 @@ La cámara debe estar conectada y tener permiso de uso. Si el sistema usa otra c
 
 ## Instrucciones
 
-1. Al iniciar, aparece una pantalla con las opciones JUGAR, INSTRUCCIONES y RANKING. Al pulsar JUGAR, la imagen espejada de la cámara y el juego se ajustan a toda la pantalla. Antes de cada nivel aparece una tarjeta con la botella objetivo, la cantidad requerida y el tiempo disponible; el juego comienza al terminar la cuenta regresiva. Durante la partida, el HUD violeta muestra el nivel, el progreso, el tiempo, la botella objetivo y las vidas.
-2. Extiende solo el dedo índice, mantén los otros dedos cerrados y pásalo sobre las botellas para compactarlas.
-3. Cada nivel indica la botella objetivo con una imagen y su nombre. Compactar una botella de otro color resta una vida; tienes tres vidas para toda la partida.
-   Aparecen botellas de los ocho colores en cada nivel; la botella objetivo aparece con más frecuencia. Las botellas caen dentro de la zona central, con un margen lateral de 200 píxeles a cada lado.
-4. Completa los ocho niveles antes de que se termine el tiempo indicado en cada nivel:
-   - Agua sin gas (verde): 6 botellas en 32 segundos.
-   - Sabor uva (violeta): 6 en 32 segundos.
-   - Sabor limón (beige): 8 en 38 segundos.
-   - Sabor ananá (amarillo): 10 en 43 segundos.
-   - Sabor pomelo rosado: 12 en 48 segundos.
-   - Sabor manzana (marrón claro): 14 en 53 segundos.
-   - Sabor frutilla (rojo): 16 en 58 segundos.
-   - Sabor naranja: 18 en 63 segundos.
-5. Si tu puntaje entra entre los cinco mejores, escribe tu nombre y presiona `Enter` para guardarlo. Si no entra, verás el ranking y tu puntaje en una tarjeta de resultados colorida.
-6. Pulsa la copa de la franja superior para consultar el ranking durante la partida; la partida queda pausada mientras lo ves. Vuelve a pulsar la copa para regresar. El ranking se muestra en una tarjeta sobre la cámara, sin modificar la imagen de video.
-7. Usa el botón de pausa de la franja superior o la tecla `P` para pausar y reanudar.
-8. En el ranking final, presiona `R` para volver a jugar sin cerrar la ventana.
-9. Si aparece el aviso de detección, mejora la iluminación y coloca la mano completa frente a la cámara.
-10. Presiona `Esc` para salir de la pantalla completa.
+1. Pulsa **JUGAR**. Antes de cada nivel verás la botella objetivo, la cantidad que debes compactar y el tiempo disponible.
+2. Extiende solo el índice, cierra los otros dedos y pasa la punta sobre la botella objetivo. Compactar otra botella resta una vida; tienes tres.
+3. Completa los ocho niveles antes de que se agote el tiempo. El objetivo y el progreso aparecen en pantalla.
+4. Usa el botón de pausa o `P` para pausar. Pulsa la copa para consultar el ranking; vuelve a pulsarla para regresar.
+5. Si entras entre los cinco mejores, escribe tu nombre y presiona `Enter`. En el ranking final, `R` inicia otra partida y `Esc` sale del juego.
 
 El ranking se guarda en `ranking.json` dentro de esta carpeta y persiste entre partidas en la misma computadora.
 
-La música no es necesaria: el juego incluye efectos de sonido para compactar botellas correctas y equivocadas.
+El juego incluye efectos de sonido para compactar botellas correctas y equivocadas.
 
-## Controles y cámara
+## Mejorar la detección
 
-`vision.py` usa MediaPipe para detectar la mano y reconocer el gesto de compactar: extendé solo el índice, mantené los otros dedos cerrados y pasalo sobre una botella para compactarla. El punto de contacto sigue la punta del índice. El modelo está incluido en `assets/models/hand_landmarker.task`. La imagen de cámara ocupa toda la pantalla. Las botellas caen dentro de la zona central, dejando un margen lateral de 200 píxeles.
-
-
+- **Luz:** usa iluminación pareja de frente; evita el contraluz y las sombras fuertes.
+- **Fondo:** elige uno simple, sin objetos que se confundan con la mano.
+- **Distancia:** empieza a unos 50–100 cm y ajusta para que la mano completa se vea con claridad, sin quedar cortada.
+- **Postura:** mantén la mano frente a la cámara.
 
 ## Estructura
 
